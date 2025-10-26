@@ -1,0 +1,4 @@
+# Hero Video Placeholder
+This file indicates that hero-video.mp4 should be placed here for the hero section background video.
+
+For now, the hero section will use a fallback image instead of video.

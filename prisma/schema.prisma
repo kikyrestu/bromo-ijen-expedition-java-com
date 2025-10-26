@@ -1,0 +1,460 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model SectionContent {
+  id              String   @id @default(cuid())
+  sectionId       String   @unique
+  title           String?  @db.VarChar(255)
+  subtitle        String?  @db.Text
+  description     String?  @db.Text
+  ctaText         String?  @db.VarChar(255)
+  ctaLink         String?  @db.VarChar(255)
+  buttonText      String?  @db.VarChar(255)
+  image           String?  @db.VarChar(255)
+  logo            String?  @db.VarChar(255)
+  phone           String?  @db.VarChar(100)
+  email           String?  @db.VarChar(255)
+  backgroundVideo String?  @db.VarChar(255)
+  destinations    String?  @db.Text
+  features        String?  @db.Text
+  stats           String?  @db.Text
+  packages        String?  @db.Text
+  testimonials    String?  @db.Text
+  posts           String?  @db.Text
+  items           String?  @db.Text
+  categories      String?  @db.Text
+  displayCount    Int?
+  featuredOnly    Boolean? @default(false)
+  category        String?  @db.VarChar(100)
+  sortBy          String?  @db.VarChar(50)
+  layoutStyle     String?  @db.VarChar(50)
+  updatedAt       DateTime @updatedAt @db.Timestamp(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("section_contents")
+}
+
+model Destination {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(255)
+  location    String   @db.VarChar(255)
+  category    String   @db.VarChar(100)
+  rating      Float    @db.Float
+  visitors    String   @db.VarChar(50)
+  duration    String   @db.VarChar(100)
+  price       String   @db.VarChar(50)
+  description String   @db.Text
+  highlights  String   @db.Text
+  image       String   @db.VarChar(255)
+  featured    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt @db.Timestamp(0)
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("destinations")
+}
+
+model Package {
+  id              String   @id @default(cuid())
+  title           String   @db.VarChar(255)
+  slug            String?  @unique @db.VarChar(255)
+  duration        String   @db.VarChar(100)
+  price           Float    @db.Float
+  originalPrice   Float?   @db.Float
+  discount        String?  @db.VarChar(50)
+  rating          Float    @db.Float
+  reviewCount     Int
+  category        String   @db.VarChar(100)
+  description     String   @db.Text
+  longDescription String?  @db.Text
+  destinations    String   @db.Text
+  includes        String   @db.Text
+  excludes        String?  @db.Text
+  highlights      String   @db.Text
+  itinerary       String?  @db.Text
+  gallery         String?  @db.Text
+  faqs            String?  @db.Text
+  groupSize       String   @db.VarChar(50)
+  difficulty      String   @db.VarChar(50)
+  bestFor         String   @db.VarChar(100)
+  image           String   @db.VarChar(255)
+  departure       String?  @db.VarChar(100)
+  return          String?  @db.VarChar(100)
+  totalPeople     Int?
+  location        String?  @db.VarChar(255)
+  mapEmbedUrl     String?  @db.Text
+  featured        Boolean  @default(false)
+  available       Boolean  @default(true)
+  status          String   @default("draft") @db.VarChar(20)
+  // Localized URL fields
+  localizedUrls   String?  @db.Text // JSON string containing localized URLs
+  urlPathEn       String?  @db.VarChar(100) // English URL path (e.g., "tours")
+  urlPathDe        String?  @db.VarChar(100) // German URL path (e.g., "reisen")
+  urlPathNl        String?  @db.VarChar(100) // Dutch URL path (e.g., "reizen")
+  urlPathZh        String?  @db.VarChar(100) // Chinese URL path (e.g., "旅游")
+  updatedAt       DateTime @updatedAt @db.Timestamp(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("packages")
+}
+
+model Blog {
+  id          String   @id @default(cuid())
+  slug        String?  @unique @db.VarChar(255)
+  title       String   @db.VarChar(255)
+  excerpt     String   @db.Text
+  content     String   @db.LongText
+  author      String   @db.VarChar(100)
+  publishDate DateTime @db.DateTime(0)
+  readTime    String   @db.VarChar(50)
+  category    String   @db.VarChar(100)
+  tags        String   @db.Text
+  image       String   @db.VarChar(255)
+  featured    Boolean  @default(false)
+  status      String   @default("draft") @db.VarChar(20)
+  // Localized URL fields
+  localizedUrls   String?  @db.Text // JSON string containing localized URLs
+  urlPathEn       String?  @db.VarChar(100) // English URL path (e.g., "blog")
+  urlPathDe        String?  @db.VarChar(100) // German URL path (e.g., "blog")
+  urlPathNl        String?  @db.VarChar(100) // Dutch URL path (e.g., "blog")
+  urlPathZh        String?  @db.VarChar(100) // Chinese URL path (e.g., "博客")
+  updatedAt   DateTime @updatedAt @db.Timestamp(0)
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("blogs")
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  role        String   @db.VarChar(100)
+  content     String   @db.Text
+  rating      Int
+  image       String?  @db.VarChar(255)
+  packageName String   @default("") @db.VarChar(255)
+  location    String   @default("") @db.VarChar(100)
+  status      String   @default("pending") @db.VarChar(20)
+  featured    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt @db.Timestamp(0)
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("testimonials")
+}
+
+model GalleryItem {
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(255)
+  category    String   @db.VarChar(100)
+  image       String   @db.VarChar(255)
+  description String?  @db.Text
+  tags        String   @db.Text
+  likes       Int      @default(0)
+  views       Int      @default(0)
+  updatedAt   DateTime @updatedAt @db.Timestamp(0)
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("gallery_items")
+}
+
+model Settings {
+  id                     String   @id @default("default") @db.VarChar(50)
+  whatsappNumber         String   @default("") @db.VarChar(20)
+  whatsappGreeting       String?  @db.Text
+  providerName           String   @default("Bromo Ijen Tour") @db.VarChar(255)
+  memberSince            String   @default("14 May 2024") @db.VarChar(50)
+  providerPhone          String   @default("+62 812-3456-7890") @db.VarChar(20)
+  providerEmail          String   @default("info@bromotour.com") @db.VarChar(255)
+  siteName               String   @default("Bromo Ijen Tour & Travel") @db.VarChar(255)
+  siteDescription        String?  @db.Text
+  defaultOgImage         String   @default("/og-default.jpg") @db.VarChar(255)
+  siteUrl                String   @default("https://bromoijen.com") @db.VarChar(255)
+  googleSiteVerification String   @default("") @db.VarChar(255)
+  bingSiteVerification   String   @default("") @db.VarChar(255)
+  activeTemplate         String   @default("default") @db.VarChar(100)
+  updatedAt              DateTime @updatedAt @db.Timestamp(0)
+  createdAt              DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("settings")
+}
+
+model LocalizedUrlSettings {
+  id                String   @id @default("default")
+  contentType       String   @db.VarChar(50) // "packages", "blog", "gallery", etc.
+  // Default URL paths for each language
+  urlPathId         String?  @db.VarChar(100) // Indonesian (default)
+  urlPathEn         String?  @db.VarChar(100) // English
+  urlPathDe         String?  @db.VarChar(100) // German
+  urlPathNl         String?  @db.VarChar(100) // Dutch
+  urlPathZh         String?  @db.VarChar(100) // Chinese
+  // Additional settings
+  autoGenerate      Boolean  @default(true) // Auto-generate URLs from content
+  customPattern      String?  @db.Text // Custom URL pattern
+  updatedAt         DateTime @updatedAt @db.Timestamp(0)
+  createdAt         DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([contentType])
+  @@map("localized_url_settings")
+}
+
+model SeoData {
+  id           String   @id @default(cuid())
+  pageType     String   @db.VarChar(50)
+  pageSlug     String   @db.VarChar(255)
+  title        String   @db.VarChar(60)
+  description  String   @db.VarChar(160)
+  keywords     String?  @db.Text
+  canonicalUrl String   @db.VarChar(255)
+  ogImage      String?  @db.VarChar(255)
+  ogType       String   @default("website") @db.VarChar(50)
+  noIndex      Boolean  @default(false)
+  updatedAt    DateTime @updatedAt @db.Timestamp(0)
+  createdAt    DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([pageType, pageSlug])
+  @@map("seo_data")
+}
+
+model SitemapLog {
+  id            String   @id @default(cuid())
+  totalPages    Int
+  lastGenerated DateTime @db.Timestamp(0)
+  googlePinged  Boolean  @default(false)
+  bingPinged    Boolean  @default(false)
+  createdAt     DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("sitemap_logs")
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  packageId       String   @db.VarChar(255)
+  packageName     String   @db.VarChar(255)
+  customerName    String   @db.VarChar(100)
+  customerEmail   String   @db.VarChar(255)
+  customerPhone   String   @db.VarChar(20)
+  checkInDate     DateTime @db.DateTime(0)
+  checkOutDate    DateTime @db.DateTime(0)
+  adults          Int
+  children        Int
+  infants         Int
+  totalPrice      Float    @db.Float
+  status          String   @default("pending") @db.VarChar(20)
+  paymentStatus   String   @default("pending") @db.VarChar(20)
+  specialRequests String?  @db.Text
+  updatedAt       DateTime @updatedAt @db.Timestamp(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("bookings")
+}
+
+model NavigationMenu {
+  id        String           @id @default(cuid())
+  name      String           @db.VarChar(100)
+  location  String           @db.VarChar(50)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now()) @db.Timestamp(0)
+  updatedAt DateTime         @updatedAt @db.Timestamp(0)
+  items     NavigationItem[]
+
+  @@map("navigation_menus")
+}
+
+model NavigationItem {
+  id              String                      @id @default(cuid())
+  menuId          String                      @db.VarChar(255)
+  parentId        String?                     @db.VarChar(255)
+  order           Int                         @default(0)
+  isActive        Boolean                     @default(true)
+  isExternal      Boolean                     @default(false)
+  target          String                      @default("_self") @db.VarChar(10)
+  iconType        String                      @default("fontawesome") @db.VarChar(20)
+  iconName        String?                     @db.VarChar(50)
+  iconUrl         String?                     @db.VarChar(255)
+  backgroundColor String?                     @db.VarChar(7)
+  textColor       String?                     @db.VarChar(7)
+  hoverColor      String?                     @db.VarChar(7)
+  activeColor     String?                     @db.VarChar(7)
+  fontFamily      String?                     @db.VarChar(100)
+  fontSize        String?                     @db.VarChar(10)
+  fontWeight      String?                     @db.VarChar(10)
+  createdAt       DateTime                    @default(now()) @db.Timestamp(0)
+  updatedAt       DateTime                    @updatedAt @db.Timestamp(0)
+  translations    NavigationItemTranslation[]
+  menu            NavigationMenu              @relation(fields: [menuId], references: [id])
+  parent          NavigationItem?             @relation("ParentChild", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children        NavigationItem[]            @relation("ParentChild")
+
+  @@index([menuId], map: "navigation_items_menuId_fkey")
+  @@index([parentId], map: "navigation_items_parentId_fkey")
+  @@map("navigation_items")
+}
+
+model NavigationItemTranslation {
+  id       String         @id @default(cuid())
+  itemId   String         @db.VarChar(255)
+  language String         @db.VarChar(5)
+  title    String         @db.VarChar(100)
+  url      String         @db.VarChar(255)
+  item     NavigationItem @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([itemId, language])
+  @@map("navigation_item_translations")
+}
+
+model TopbarSettings {
+  id              String   @id @default("default") @db.VarChar(50)
+  isEnabled       Boolean  @default(true)
+  phone           String   @default("") @db.VarChar(20)
+  email           String   @default("") @db.VarChar(255)
+  announcement    String?  @db.Text
+  showLanguage    Boolean  @default(true)
+  showSocial      Boolean  @default(true)
+  socialLinks     String?  @db.Text
+  backgroundColor String   @default("#f8f9fa") @db.VarChar(7)
+  textColor       String   @default("#333333") @db.VarChar(7)
+  updatedAt       DateTime @updatedAt @db.Timestamp(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("topbar_settings")
+}
+
+model MobileMenuSettings {
+  id              String   @id @default("default") @db.VarChar(50)
+  menuType        String   @default("hamburger") @db.VarChar(20)
+  position        String   @default("top-right") @db.VarChar(20)
+  animation       String   @default("slide") @db.VarChar(20)
+  backgroundColor String   @default("#ffffff") @db.VarChar(7)
+  textColor       String   @default("#333333") @db.VarChar(7)
+  iconColor       String   @default("#333333") @db.VarChar(7)
+  updatedAt       DateTime @updatedAt @db.Timestamp(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("mobile_menu_settings")
+}
+
+model LanguageSettings {
+  id                       String   @id @default("default") @db.VarChar(50)
+  defaultLanguage          String   @default("id") @db.VarChar(5)
+  supportedLanguages       String?  @db.Text
+  showLanguageSwitcher     Boolean  @default(true)
+  languageSwitcherPosition String   @default("topbar") @db.VarChar(20)
+  updatedAt                DateTime @updatedAt @db.Timestamp(0)
+  createdAt                DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("language_settings")
+}
+
+model CustomIcon {
+  id         String   @id @default(cuid())
+  name       String   @unique @db.VarChar(100)
+  svgContent String   @db.LongText
+  category   String   @default("general") @db.VarChar(50)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now()) @db.Timestamp(0)
+  updatedAt  DateTime @updatedAt @db.Timestamp(0)
+
+  @@map("custom_icons")
+}
+
+model PackageTranslation {
+  id               String   @id @default(cuid())
+  packageId        String   @db.VarChar(255)
+  language         String   @db.VarChar(5)
+  title            String?  @db.VarChar(255)
+  description      String?  @db.Text
+  longDescription  String?  @db.Text
+  destinations     String?  @db.Text
+  includes         String?  @db.Text
+  excludes         String?  @db.Text
+  highlights       String?  @db.Text
+  itinerary        String?  @db.Text
+  faqs             String?  @db.Text
+  groupSize        String?  @db.VarChar(50)
+  difficulty       String?  @db.VarChar(50)
+  bestFor          String?  @db.VarChar(100)
+  departure        String?  @db.VarChar(100)
+  return           String?  @db.VarChar(100)
+  location         String?  @db.VarChar(255)
+  isAutoTranslated Boolean  @default(false)
+  createdAt        DateTime @default(now()) @db.Timestamp(0)
+  updatedAt        DateTime @updatedAt @db.Timestamp(0)
+
+  @@unique([packageId, language])
+  @@map("package_translations")
+}
+
+model BlogTranslation {
+  id               String   @id @default(cuid())
+  blogId           String   @db.VarChar(255)
+  language         String   @db.VarChar(5)
+  title            String?  @db.VarChar(255)
+  excerpt          String?  @db.Text
+  content          String?  @db.LongText
+  category         String?  @db.VarChar(100)
+  tags             String?  @db.Text
+  isAutoTranslated Boolean  @default(false)
+  createdAt        DateTime @default(now()) @db.Timestamp(0)
+  updatedAt        DateTime @updatedAt @db.Timestamp(0)
+
+  @@unique([blogId, language])
+  @@map("blog_translations")
+}
+
+model TestimonialTranslation {
+  id               String   @id @default(cuid())
+  testimonialId    String   @db.VarChar(255)
+  language         String   @db.VarChar(5)
+  name             String?  @db.VarChar(100)
+  role             String?  @db.VarChar(100)
+  content          String?  @db.Text
+  packageName      String?  @db.VarChar(255)
+  location         String?  @db.VarChar(100)
+  isAutoTranslated Boolean  @default(false)
+  createdAt        DateTime @default(now()) @db.Timestamp(0)
+  updatedAt        DateTime @updatedAt @db.Timestamp(0)
+
+  @@unique([testimonialId, language])
+  @@map("testimonial_translations")
+}
+
+model GalleryTranslation {
+  id               String   @id @default(cuid())
+  galleryId        String   @db.VarChar(255)
+  language         String   @db.VarChar(5)
+  title            String?  @db.VarChar(255)
+  description      String?  @db.Text
+  tags             String?  @db.Text
+  isAutoTranslated Boolean  @default(false)
+  createdAt        DateTime @default(now()) @db.Timestamp(0)
+  updatedAt        DateTime @updatedAt @db.Timestamp(0)
+
+  @@unique([galleryId, language])
+  @@map("gallery_translations")
+}
+
+model SectionContentTranslation {
+  id               String   @id @default(cuid())
+  sectionId        String   @db.VarChar(255)
+  language         String   @db.VarChar(5)
+  title            String?  @db.VarChar(255)
+  subtitle         String?  @db.Text
+  description      String?  @db.Text
+  ctaText          String?  @db.VarChar(255)
+  buttonText       String?  @db.VarChar(255)
+  destinations     String?  @db.Text
+  features         String?  @db.Text
+  stats            String?  @db.Text
+  isAutoTranslated Boolean  @default(false)
+  createdAt        DateTime @default(now()) @db.Timestamp(0)
+  updatedAt        DateTime @updatedAt @db.Timestamp(0)
+
+  @@unique([sectionId, language])
+  @@map("section_content_translations")
+}
