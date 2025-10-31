@@ -22,7 +22,8 @@ import {
   Clock,
   Heart,
   Settings,
-  BarChart3
+  BarChart3,
+  Code
 } from 'lucide-react';
 import HeroSection from '@/components/HeroSection';
 import WhoAmISection from '@/components/WhoAmISection';
@@ -30,6 +31,7 @@ import DestinasiEksklusifSection from '@/components/DestinasiEksklusifSection';
 import TourPackagesSection from '@/components/TourPackagesSection';
 import BlogSection from '@/components/BlogSection';
 import TestimonialSection from '@/components/TestimonialSection';
+import GallerySection from '@/components/GallerySection';
 import MediaManager from '@/components/MediaManager';
 import LanguageProvider from '@/contexts/LanguageContext';
 
@@ -61,6 +63,14 @@ interface SectionContent {
   category?: string;
   sortBy?: string;
   layoutStyle?: string;
+  // Gallery-specific settings
+  showFilters?: boolean;
+  enableLightbox?: boolean;
+  // Animation settings (for Carousel & other animated layouts)
+  enableAutoSlide?: boolean;
+  autoSlideInterval?: number;
+  transitionEffect?: string;
+  animationSpeed?: string;
   updatedAt?: string;
 }
 
@@ -472,63 +482,62 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
     const error = errors[field];
 
     return (
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-900 mb-2">
+      <div className="elementor-control mb-4">
+        <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-orange-500 ml-1">*</span>}
         </label>
         {type === 'rich-text' ? (
           <div>
-          <Editor
-            value={value as string}
+            <Editor
+              value={value as string}
               tinymceScriptSrc="/tinymce/tinymce.min.js"
               licenseKey="gpl"
-            onEditorChange={(content) => updateContent(field, content)}
-            init={{
-                height: 300,
-              menubar: false,
-                skin_url: '/tinymce/skins/ui/oxide',
-                content_css: '/tinymce/skins/content/default/content.min.css',
-              plugins: [
-                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                'insertdatetime', 'media', 'table', 'help', 'wordcount'
-              ],
-              toolbar: 'undo redo | blocks | ' +
-                'bold italic forecolor | alignleft aligncenter ' +
-                'alignright alignjustify | bullist numlist outdent indent | ' +
-                'removeformat | help',
-                content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; }',
-                placeholder: `Enter ${label.toLowerCase()} here...`
-            }}
-          />
-            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+              onEditorChange={(content) => updateContent(field, content)}
+              init={{
+                height: 200,
+                menubar: false,
+                skin: 'oxide-dark',
+                content_css: 'dark',
+                skin_url: '/tinymce/skins/ui/oxide-dark',
+                content_css_cors: true,
+                plugins: [
+                  'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+                  'anchor', 'searchreplace', 'visualblocks', 'code',
+                  'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                ],
+                toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist',
+                content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; color: #e0e0e0; background: #2c2d30; }',
+                placeholder: `Enter ${label.toLowerCase()}...`
+              }}
+            />
+            {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
           </div>
         ) : type === 'textarea' ? (
           <div>
-          <textarea
-            value={value as string}
-            onChange={(e) => updateContent(field, e.target.value)}
-            rows={4}
-              placeholder={`Enter ${label.toLowerCase()} here...`}
-              className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-vertical text-gray-900 placeholder:text-gray-400 ${
-                error ? 'border-red-500' : 'border-gray-300'
+            <textarea
+              value={value as string}
+              onChange={(e) => updateContent(field, e.target.value)}
+              rows={3}
+              placeholder={`Enter ${label.toLowerCase()}...`}
+              className={`w-full px-3 py-2 bg-[#2c2d30] border rounded-lg text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-vertical ${
+                error ? 'border-red-500' : 'border-gray-700'
               }`}
-          />
-            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+            />
+            {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
           </div>
         ) : (
           <div>
-          <input
-            type={type}
-            value={value as string}
-            onChange={(e) => updateContent(field, e.target.value)}
-              placeholder={`Enter ${label.toLowerCase()} here...`}
-              className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 placeholder:text-gray-400 ${
-                error ? 'border-red-500' : 'border-gray-300'
+            <input
+              type={type}
+              value={value as string}
+              onChange={(e) => updateContent(field, e.target.value)}
+              placeholder={`Enter ${label.toLowerCase()}...`}
+              className={`w-full px-3 py-2 bg-[#2c2d30] border rounded-lg text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                error ? 'border-red-500' : 'border-gray-700'
               }`}
-          />
-            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+            />
+            {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
           </div>
         )}
       </div>
@@ -1311,7 +1320,7 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
   const renderPreview = () => {
     if (!content) return null;
 
-    const hasCustomPreview = sectionId === 'header' || sectionId === 'hero' || sectionId === 'whoAmI' || sectionId === 'exclusiveDestinations' || sectionId === 'testimonials' || sectionId === 'blog';
+    const hasCustomPreview = sectionId === 'header' || sectionId === 'hero' || sectionId === 'whoAmI' || sectionId === 'exclusiveDestinations' || sectionId === 'testimonials' || sectionId === 'blog' || sectionId === 'gallery';
 
   return (
       <LanguageProvider initialLanguage="id">
@@ -1452,7 +1461,11 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                 title: content.title,
                 subtitle: content.subtitle,
                 description: content.description,
-                posts: (content.posts as any) || []
+                posts: (content.posts as any) || [],
+                layoutStyle: content.layoutStyle,
+                displayCount: content.displayCount,
+                featuredOnly: content.featuredOnly,
+                sortBy: content.sortBy
               }}
             />
           </div>
@@ -1471,6 +1484,63 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                 sortBy: content.sortBy
               }}
             />
+          </div>
+        )}
+
+        {/* Gallery Preview - render komponen asli */}
+        {sectionId === 'gallery' && (
+          <div className="space-y-4">
+            {/* Layout Indicator */}
+            <div className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-lg p-4 shadow-lg">
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-white/80">Active Layout</p>
+                    <p className="text-lg font-bold">
+                      {content.layoutStyle === 'grid' 
+                        ? '📐 Grid Layout (Equal Height)' 
+                        : content.layoutStyle === 'carousel'
+                        ? '🎠 Carousel Layout (Horizontal Slider)'
+                        : content.layoutStyle === 'bento'
+                        ? '🎨 Bento Layout (Modern Asymmetric)'
+                        : '🧱 Masonry Layout (Pinterest Style)'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-white/80">Display Settings</p>
+                  <p className="text-sm font-semibold">
+                    {content.displayCount || 12} items • {content.category || 'All'} • {content.sortBy || 'Newest'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Gallery Component */}
+            <div className="rounded-lg overflow-hidden ring-1 ring-gray-200">
+              <GallerySection
+                overrideContent={{
+                  title: content.title,
+                  subtitle: content.subtitle,
+                  description: content.description,
+                  ctaText: content.ctaText,
+                  ctaLink: content.ctaLink,
+                  layoutStyle: content.layoutStyle,
+                  displayCount: content.displayCount,
+                  category: content.category,
+                  sortBy: content.sortBy,
+                  showFilters: content.showFilters,
+                  enableLightbox: content.enableLightbox,
+                  enableAutoSlide: content.enableAutoSlide,
+                  autoSlideInterval: content.autoSlideInterval,
+                  transitionEffect: content.transitionEffect,
+                  animationSpeed: content.animationSpeed
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -1526,71 +1596,166 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
   };
 
   return (
-    <div className="w-full">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 lg:mb-8">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-            <SectionIcon className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
-          </div>
-          <div>
-            <h2 className="text-xl lg:text-2xl font-semibold text-gray-900 capitalize">
-              Edit {sectionId.replace(/([A-Z])/g, ' $1').trim()} Section
-            </h2>
-            <p className="text-sm text-gray-600">Manage content for this section</p>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 lg:space-x-3">
-          <button
-            onClick={() => setShowPreview(!showPreview)}
-            className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showPreview
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Eye className="w-4 h-4 mr-2 inline" />
-            {showPreview ? 'Edit' : 'Preview'}
-          </button>
-          <button
-            onClick={() => { const next = !hideSidebar; setHideSidebar(next); if (next) setShowPreview(true); }}
-            className="px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-          >
-            {hideSidebar ? 'Show Sidebar' : 'Hide Sidebar'}
-          </button>
+    <div className="elementor-wrapper fixed inset-0 z-50 flex flex-col bg-[#0a0e14] overflow-hidden">
+      {/* Top Toolbar - Elementor Style */}
+      <div className="elementor-topbar flex items-center justify-between border-b border-gray-800 bg-[#1c1d1f] px-4 py-2.5 shadow-lg">
+        {/* Left: Logo & Section Info */}
+        <div className="flex items-center gap-4">
           <button
             onClick={onCancel}
-            className="px-3 lg:px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#2c2d30] text-gray-400 transition hover:bg-[#3c3d40] hover:text-white"
+            title="Back to Dashboard"
           >
-            Cancel
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
+          
+          <div className="flex items-center gap-3 border-l border-gray-700 pl-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-pink-500">
+              <SectionIcon className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 uppercase tracking-wider">Editing Section</div>
+              <div className="text-sm font-semibold text-white">
+                {sectionId.replace(/([A-Z])/g, ' $1').trim()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Device Preview Switcher */}
+        <div className="flex items-center gap-1 rounded-lg bg-[#2c2d30] p-1">
+          <button className="flex h-8 items-center gap-2 rounded px-3 bg-[#93003c] text-white text-xs font-medium">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Desktop
+          </button>
+          <button className="flex h-8 items-center gap-2 rounded px-3 text-gray-400 text-xs font-medium hover:bg-[#3c3d40] hover:text-white transition" disabled>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Mobile
+          </button>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            className={`flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-medium transition ${
+              showPreview
+                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                : 'bg-[#2c2d30] text-gray-400 hover:bg-[#3c3d40] hover:text-white'
+            }`}
+          >
+            <Eye className="h-4 w-4" />
+            Preview
+          </button>
+          
+          <div className="w-px h-6 bg-gray-700 mx-1"></div>
+          
+          <button
+            onClick={() => {
+              const next = !hideSidebar;
+              setHideSidebar(next);
+              if (next) setShowPreview(true);
+            }}
+            className="flex h-9 items-center gap-2 rounded-lg bg-[#2c2d30] px-4 text-xs font-medium text-gray-400 transition hover:bg-[#3c3d40] hover:text-white"
+          >
+            <Settings className="h-4 w-4" />
+            {hideSidebar ? 'Show' : 'Hide'} Panel
+          </button>
+          
           <button
             onClick={handleSave}
             disabled={saving || isAnyUploading}
-            className="px-4 lg:px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors"
+            className="flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-6 text-xs font-semibold text-white shadow-lg shadow-orange-500/30 transition hover:from-orange-400 hover:to-pink-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-4 h-4 mr-2 inline" />
-            {saving ? 'Saving...' : isAnyUploading ? 'Uploading...' : 'Save Changes'}
+            <Save className="h-4 w-4" />
+            {saving ? 'Saving...' : isAnyUploading ? 'Uploading...' : 'Update'}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
-        {/* Content Editor (Sidebar) */}
+      {/* Main Content Area */}
+      <div className="elementor-main flex flex-1 overflow-hidden">
+        {/* Left Panel - Elementor Style */}
         {!hideSidebar && (
-        <div className="xl:col-span-4 space-y-4 lg:space-y-6">
-            {isAnyUploading && (
-              <div className="bg-orange-50 border border-orange-200 text-orange-800 text-sm px-3 py-2 rounded-lg">
-                Sedang upload file... tunggu bentar ya
+          <div className="elementor-panel flex w-[420px] flex-col border-r border-gray-800 bg-[#1c1d1f]">
+            {/* Panel Header with Tabs */}
+            <div className="elementor-panel-header border-b border-gray-800">
+              <div className="flex">
+                {['content', 'style', 'advanced'].map((tabKey) => (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    onClick={() => setActiveTab(tabKey)}
+                    className={`flex-1 px-4 py-3 text-xs font-medium uppercase tracking-wider transition ${
+                      activeTab === tabKey
+                        ? 'bg-[#2c2d30] text-white border-b-2 border-orange-500'
+                        : 'text-gray-400 hover:text-white hover:bg-[#25262a]'
+                    }`}
+                  >
+                    {tabKey === 'content' ? (
+                      <span className="flex items-center gap-2 justify-center">
+                        <Edit className="h-3.5 w-3.5" />
+                        Content
+                      </span>
+                    ) : tabKey === 'style' ? (
+                      <span className="flex items-center gap-2 justify-center">
+                        <Settings className="h-3.5 w-3.5" />
+                        Style
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2 justify-center">
+                        <Code className="h-3.5 w-3.5" />
+                        Advanced
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-            )}
-            {/* Basic Information - Show for all sections including hero */}
-            <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6">
-              <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-              {renderField('title', 'Title', 'text', true)}
-              {renderField('subtitle', 'Subtitle')}
-              {renderField('description', 'Description', 'rich-text')}
+            </div>
+
+            {/* Panel Content - Scrollable */}
+            <div className="elementor-panel-content flex-1 overflow-y-auto">
+              {activeTab === 'content' ? (
+                <div className="space-y-1">
+                  {/* Upload Status */}
+                  {isAnyUploading && (
+                    <div className="mx-4 mt-4 bg-orange-500/10 border border-orange-500/30 text-orange-300 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                      <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Uploading file...</span>
+                    </div>
+                  )}
+
+                  {/* Collapsible Section: Basic Information */}
+                  <div className="elementor-control-section border-b border-gray-800">
+                    <button
+                      type="button"
+                      onClick={() => setHideSidebar(!hideSidebar)}
+                      className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-[#25262a] transition"
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-300">
+                        📝 Basic Information
+                      </span>
+                      <svg
+                        className={`h-4 w-4 text-gray-400 transition-transform ${hideSidebar ? '' : 'rotate-180'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {!hideSidebar && (
+                      <div className="px-5 py-4 space-y-3 bg-[#1a1b1e]">
+                        {renderField('title', 'Title', 'text', true)}
+                        {renderField('subtitle', 'Subtitle')}
+                        {renderField('description', 'Description', 'rich-text')}
               {sectionId === 'hero' && (
                 <div className="mt-4">
                   {renderField('backgroundVideo', 'Background Video URL', 'url')}
@@ -1714,15 +1879,17 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                           }}
                         />
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Current image: {content.image}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                        <p className="text-xs text-gray-500 mt-1">Current image: {content.image}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                      </div>
+                    )}
+                  </div>
 
-            {/* Dynamic Content Sections */}
-        {sectionId === 'hero' && (
+                  {/* More Collapsible Sections - Old Style sections below, will be refactored later */}
+                  {sectionId === 'hero' && (
               <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base lg:text-lg font-semibold text-gray-900">Destinations</h3>
@@ -2065,12 +2232,13 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                         onChange={(e) => updateContent('layoutStyle', e.target.value)}
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
                       >
-                        <option value="grid">Grid (3 columns)</option>
-                        <option value="list" disabled>List View (Coming Soon)</option>
-                        <option value="masonry" disabled>Masonry (Coming Soon)</option>
-                        <option value="carousel" disabled>Carousel (Coming Soon)</option>
+                        <option value="grid">📰 Grid (3 columns)</option>
+                        <option value="list">📋 List View (Vertical Cards)</option>
+                        <option value="masonry">🧱 Masonry (Pinterest Style)</option>
+                        <option value="featured">⭐ Featured (Hero + Grid)</option>
+                        <option value="spotlight">🎯 Spotlight (Hero + List)</option>
                       </select>
-                      <p className="text-xs text-gray-500 mt-1">More layouts coming soon!</p>
+                      <p className="text-xs text-gray-500 mt-1">Choose how blog posts are displayed on homepage</p>
                     </div>
 
                     <div>
@@ -2091,29 +2259,235 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
             )}
 
             {sectionId === 'gallery' && (
-              <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base lg:text-lg font-semibold text-gray-900">Gallery Items</h3>
-                  <button onClick={() => setHideGallery(!hideGallery)} className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50">{hideGallery ? 'Show' : 'Hide'}</button>
+              <>
+                <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>ℹ️ Note:</strong> Gallery items are managed in the <strong>Gallery</strong> tab. 
+                      This section controls display settings for the homepage gallery.
+                    </p>
+                  </div>
                 </div>
-                {!hideGallery && renderArrayField('items', '', [
-                  { name: 'title', label: 'Title', required: true },
-          { name: 'category', label: 'Category' },
-                  { name: 'image', label: 'Image URL', type: 'url', required: true },
-          { name: 'likes', label: 'Likes' },
-          { name: 'views', label: 'Views' }
-                ], false)}
-      </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6">
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">Display Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Layout Style</label>
+                      <select
+                        value={content?.layoutStyle || 'masonry'}
+                        onChange={(e) => updateContent('layoutStyle', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                      >
+                        <option value="masonry">🧱 Masonry (Pinterest Style)</option>
+                        <option value="grid">📐 Grid (Equal Height)</option>
+                        <option value="carousel">🎠 Carousel (Horizontal Slider)</option>
+                        <option value="bento">🎨 Bento (Modern Asymmetric)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Choose how gallery items are displayed</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Number of Items to Display</label>
+                      <input
+                        type="number"
+                        value={content?.displayCount || 12}
+                        onChange={(e) => updateContent('displayCount', parseInt(e.target.value) || 12)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                        placeholder="e.g., 12"
+                        min="6"
+                        max="24"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">How many gallery items to show (6-24)</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Default Category Filter</label>
+                      <select
+                        value={content?.category || 'all'}
+                        onChange={(e) => updateContent('category', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                      >
+                        <option value="all">All Categories</option>
+                        <option value="bromo">Bromo</option>
+                        <option value="ijen">Ijen</option>
+                        <option value="culture">Culture</option>
+                        <option value="nature">Nature</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Default filter when page loads</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Sort By</label>
+                      <select
+                        value={content?.sortBy || 'newest'}
+                        onChange={(e) => updateContent('sortBy', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                      >
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="popular">Most Popular (Views)</option>
+                        <option value="liked">Most Liked</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Show Category Filters</label>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={content?.showFilters !== false}
+                          onChange={(e) => updateContent('showFilters', e.target.checked)}
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                        />
+                        <label className="ml-2 block text-sm text-gray-900">
+                          Display category filter buttons
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Enable Lightbox</label>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={content?.enableLightbox !== false}
+                          onChange={(e) => updateContent('enableLightbox', e.target.checked)}
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                        />
+                        <label className="ml-2 block text-sm text-gray-900">
+                          Allow clicking images to open full-screen view
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Animation Settings (For Carousel & Animated Layouts) */}
+                <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6">
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">⚡ Animation Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Enable Auto-Slide (Carousel)</label>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={content?.enableAutoSlide || false}
+                          onChange={(e) => updateContent('enableAutoSlide', e.target.checked)}
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                        />
+                        <label className="ml-2 block text-sm text-gray-900">
+                          Automatically slide through items in Carousel layout
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">💡 Only works for Carousel layout</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Auto-Slide Interval (seconds)</label>
+                      <input
+                        type="number"
+                        value={content?.autoSlideInterval || 5}
+                        onChange={(e) => updateContent('autoSlideInterval', parseInt(e.target.value) || 5)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                        placeholder="5"
+                        min="2"
+                        max="10"
+                        disabled={!content?.enableAutoSlide}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">How long each slide stays visible (2-10 seconds)</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Transition Effect</label>
+                      <select
+                        value={content?.transitionEffect || 'smooth'}
+                        onChange={(e) => updateContent('transitionEffect', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                      >
+                        <option value="smooth">🌊 Smooth (Ease-in-out)</option>
+                        <option value="instant">⚡ Instant (Snap)</option>
+                        <option value="slow">🐢 Slow (Ease)</option>
+                        <option value="bounce">🎾 Bounce</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Animation easing curve for transitions</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Animation Speed</label>
+                      <select
+                        value={content?.animationSpeed || 'normal'}
+                        onChange={(e) => updateContent('animationSpeed', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 border-gray-300"
+                      >
+                        <option value="fast">🚀 Fast (300ms)</option>
+                        <option value="normal">⏱️ Normal (500ms)</option>
+                        <option value="slow">🕐 Slow (700ms)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Duration of hover/transition animations</p>
+                    </div>
+
+                    {/* Visual Preview */}
+                    <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">🎬</div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 mb-1">Animation Preview</p>
+                          <p className="text-xs text-gray-700 leading-relaxed">
+                            <strong>Auto-slide:</strong> {content?.enableAutoSlide ? '✅ Enabled' : '❌ Disabled'} 
+                            {content?.enableAutoSlide && ` (${content?.autoSlideInterval || 5}s interval)`}
+                            <br />
+                            <strong>Effect:</strong> {content?.transitionEffect || 'smooth'}
+                            <br />
+                            <strong>Speed:</strong> {content?.animationSpeed || 'normal'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
+          </div>
+              ) : activeTab === 'style' ? (
+                <div className="px-5 py-12 text-center">
+                  <Settings className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-sm font-semibold text-gray-300 mb-2">Style Controls</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
+                    Pengaturan style lanjutan (spacing, colors, typography) akan segera hadir.
+                  </p>
+                </div>
+              ) : (
+                <div className="px-5 py-12 text-center">
+                  <Code className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-sm font-semibold text-gray-300 mb-2">Advanced Settings</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
+                    Fitur advanced seperti custom CSS dan conditional display akan tersedia pada update berikutnya.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Preview Panel (Main Canvas) */}
-        {showPreview && (
-          <div className={`${hideSidebar ? 'xl:col-span-12' : 'xl:col-span-8'} bg-gray-50 rounded-xl p-0 lg:p-0 overflow-hidden`}>
-            {renderPreview()}
-          </div>
-        )}
+        {/* Preview Canvas - Elementor Style */}
+        <div className="elementor-preview flex-1 overflow-auto bg-[#e8eaed]">
+          {showPreview ? (
+            <div className="min-h-full w-full">
+              {renderPreview()}
+            </div>
+          ) : (
+            <div className="flex h-full min-h-full items-center justify-center p-12">
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-400 bg-white/50 backdrop-blur-sm p-16 text-center max-w-lg">
+                <Eye className="h-20 w-20 text-gray-400 mb-6" />
+                <p className="text-xl font-semibold text-gray-700 mb-2">Preview Disabled</p>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Enable <strong className="text-orange-500">Preview</strong> from the toolbar to see your changes in real-time.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Media Manager Modal */}

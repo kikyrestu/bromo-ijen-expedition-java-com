@@ -8,7 +8,8 @@ interface Package {
   id: string;
   title: string;
   description: string;
-  price: number;
+  price: string | number;
+  priceRaw?: number;
   rating: number;
   reviewCount: number;
   image: string;
@@ -49,13 +50,19 @@ export default function GoturTourPackagesSection() {
         </div>
 
         {/* Packages Grid - Gotur Style with Tailwind */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {packages.map((pkg) => (
-            <Link 
-              key={pkg.id} 
-              href={`/${currentLanguage === 'id' ? '' : currentLanguage}/packages/${pkg.slug || pkg.id}`}
-              className="group"
-            >
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {packages.map((pkg) => {
+            const ratingValue = typeof pkg.rating === 'number' ? pkg.rating : 0;
+            return (
+              <Link 
+                key={pkg.id} 
+                href={`${
+                  currentLanguage === 'id' 
+                    ? `/packages/${pkg.slug || pkg.id}`
+                    : `/${currentLanguage}/packages/${pkg.slug || pkg.id}`
+                }`}
+                className="group"
+              >
               <div className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden h-full flex flex-col">
                 {/* Image Container */}
                 <div className="relative h-64 overflow-hidden bg-gray-200">
@@ -95,7 +102,7 @@ export default function GoturTourPackagesSection() {
                     {[...Array(5)].map((_, i) => (
                       <svg 
                         key={i}
-                        className={`w-5 h-5 ${i < Math.floor(pkg.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-5 h-5 ${i < Math.round(ratingValue) ? 'text-yellow-400' : 'text-gray-300'}`}
                         fill="currentColor" 
                         viewBox="0 0 20 20"
                       >
@@ -103,7 +110,7 @@ export default function GoturTourPackagesSection() {
                       </svg>
                     ))}
                     <span className="text-sm text-gray-600 ml-2">
-                      ({pkg.reviewCount || 0} Review)
+                      ({pkg.reviewCount || 0} Review{(pkg.reviewCount || 0) > 1 ? 's' : ''})
                     </span>
                   </div>
 
@@ -118,7 +125,11 @@ export default function GoturTourPackagesSection() {
                       <div>
                         <p className="text-xs text-gray-500">Per Package</p>
                         <p className="text-2xl font-bold text-orange-600">
-                          Rp {pkg.price.toLocaleString('id-ID')}
+                          {typeof pkg.priceRaw === 'number'
+                            ? `Rp ${pkg.priceRaw.toLocaleString('id-ID')}`
+                            : typeof pkg.price === 'number'
+                              ? `Rp ${pkg.price.toLocaleString('id-ID')}`
+                              : pkg.price}
                         </p>
                       </div>
                       <button className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-2 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transition-all group-hover:scale-105 transform">
@@ -131,14 +142,15 @@ export default function GoturTourPackagesSection() {
                   </div>
                 </div>
               </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
 
         {/* View All Link */}
         <div className="text-center mt-12">
           <Link 
-            href={`/${currentLanguage === 'id' ? '' : currentLanguage}/packages`}
+            href={currentLanguage === 'id' ? '/packages' : `/${currentLanguage}/packages`}
             className="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold group"
           >
             View All Tours
@@ -151,4 +163,3 @@ export default function GoturTourPackagesSection() {
     </section>
   );
 }
-

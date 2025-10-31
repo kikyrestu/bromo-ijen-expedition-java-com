@@ -1,7 +1,82 @@
 // Remove unused imports
+import prisma from '@/lib/prisma';
+import crypto from 'crypto';
 
-// DeepL API configuration - hanya untuk server-side
-const DEEPL_API_KEY = typeof window === 'undefined' ? (process.env.DEEPL_API_KEY || '') : '';
+// Encryption settings (must match api-keys route)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-character-encryption-key-here-change-this!!';
+const ALGORITHM = 'aes-256-cbc';
+
+// Decrypt function
+function decrypt(text: string): string {
+  try {
+    const textParts = text.split(':');
+    const iv = Buffer.from(textParts.shift()!, 'hex');
+    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.slice(0, 32)), iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+  } catch (error) {
+    return text; // Return original if decryption fails
+  }
+}
+
+// Cache for API key to avoid frequent database queries
+let cachedDeepLKey: string | null = null;
+let cacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Get DeepL API Key from database
+async function getDeepLApiKey(): Promise<string> {
+  // ⚠️ DON'T RETURN CACHE if it's empty string (means it was fetched but key not found)
+  // Only return cache if it's a valid non-empty key
+  if (cachedDeepLKey && cachedDeepLKey.length > 0 && Date.now() - cacheTime < CACHE_DURATION) {
+    console.log('📦 Using cached DeepL API key');
+    return cachedDeepLKey;
+  }
+
+  console.log('🔍 Fetching DeepL API key from database...');
+
+  try {
+    const settings = await prisma.apiKeySettings.findFirst();
+    
+    if (!settings || !settings.keys) {
+      // Fallback to env if no database key
+      console.warn('⚠️  No API keys in database, using environment variable');
+      cachedDeepLKey = process.env.DEEPL_API_KEY || '';
+      cacheTime = Date.now();
+      return cachedDeepLKey;
+    }
+
+    const keys = typeof settings.keys === 'string' ? JSON.parse(settings.keys) : settings.keys;
+    console.log('🔑 Keys found in database:', Object.keys(keys));
+    
+    const encryptedKey = keys.deepl || keys.DEEPL || '';
+    
+    if (encryptedKey) {
+      cachedDeepLKey = decrypt(encryptedKey);
+      cacheTime = Date.now();
+      console.log('✅ DeepL API key loaded from database');
+      console.log(`🔑 Key preview: ${cachedDeepLKey.substring(0, 15)}... (length: ${cachedDeepLKey.length})`);
+      return cachedDeepLKey;
+    }
+    
+    // Fallback to env
+    console.warn('⚠️  DeepL key not in database, using environment variable');
+    cachedDeepLKey = process.env.DEEPL_API_KEY || '';
+    cacheTime = Date.now();
+    return cachedDeepLKey;
+    
+  } catch (error) {
+    console.error('❌ Error fetching DeepL API key from database:', error);
+    // Fallback to env
+    cachedDeepLKey = process.env.DEEPL_API_KEY || '';
+    cacheTime = Date.now();
+    return cachedDeepLKey;
+  }
+}
+
+// DeepL API configuration
 const DEEPL_API_URL = 'https://api-free.deepl.com/v2/translate';
 
 // Language mapping untuk DeepL
@@ -283,7 +358,21 @@ class TranslationService {
   }
 
   private async translateWithDeepL(text: string, from: string, to: string): Promise<string> {
-    if (!DEEPL_API_KEY) {
+    console.log('\n🔍 [DEEPL] ==================== TRANSLATION REQUEST ====================');
+    console.log(`🔍 [DEEPL] Text: "${text.substring(0, 100)}..."`);
+    console.log(`🔍 [DEEPL] From: ${from} → To: ${to}`);
+    
+    const apiKey = await getDeepLApiKey();
+    
+    console.log(`🔑 [DEEPL] API Key status: ${apiKey && apiKey.length > 0 ? 'FOUND ✅' : 'MISSING ❌'}`);
+    if (apiKey) {
+      console.log(`🔑 [DEEPL] API Key length: ${apiKey.length} characters`);
+      console.log(`🔑 [DEEPL] API Key preview: ${apiKey.substring(0, 20)}...${apiKey.substring(apiKey.length - 5)}`);
+      console.log(`🔑 [DEEPL] API Key format: ${apiKey.includes(':fx') ? 'FREE API (:fx) ✅' : apiKey.includes(':') ? 'UNKNOWN FORMAT' : 'NO COLON (INVALID?)'}`);
+    }
+    
+    if (!apiKey) {
+      console.error('❌ [DEEPL] CRITICAL: API key is empty!');
       throw new Error('DeepL API key not configured');
     }
 
@@ -294,12 +383,15 @@ class TranslationService {
       const sourceLang = languageMapping[from] || from.toUpperCase();
       const targetLang = languageMapping[to] || to.toUpperCase();
 
-      console.log(`🔄 Translating "${text.substring(0, 50)}..." from ${from} to ${to}`);
+      console.log(`🔄 [DEEPL] API URL: ${DEEPL_API_URL}`);
+      console.log(`🔄 [DEEPL] Source language: ${sourceLang}`);
+      console.log(`🔄 [DEEPL] Target language: ${targetLang}`);
+      console.log(`🔄 [DEEPL] Sending request to DeepL...`);
 
       const response = await fetch(DEEPL_API_URL, {
         method: 'POST',
         headers: {
-          'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+          'Authorization': `DeepL-Auth-Key ${apiKey}`,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
@@ -310,23 +402,36 @@ class TranslationService {
         signal: AbortSignal.timeout(10000), // Increased timeout
       });
 
+      console.log(`📡 [DEEPL] Response status: ${response.status} ${response.statusText}`);
+      console.log(`📡 [DEEPL] Response headers:`, Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`❌ [DEEPL] Error response body:`, errorBody);
+        
         if (response.status === 429) {
-          console.warn('⚠️ DeepL rate limit exceeded, falling back to static translation');
+          console.warn('⚠️ [DEEPL] Rate limit exceeded, falling back to static translation');
           throw new Error('RATE_LIMIT_EXCEEDED');
+        }
+        if (response.status === 403) {
+          console.error('❌ [DEEPL] API key is INVALID or UNAUTHORIZED!');
+          throw new Error(`DeepL API error: 403 Unauthorized - Check your API key`);
         }
         throw new Error(`DeepL API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`✅ [DEEPL] Translation successful!`);
+      console.log(`✅ [DEEPL] Result: "${data.translations[0].text.substring(0, 100)}..."`);
       
       if (data.translations && data.translations.length > 0) {
         return data.translations[0].text;
       }
 
-      throw new Error('DeepL translation failed');
+      throw new Error('DeepL translation failed - no translations in response');
     } catch (error) {
-      console.error('DeepL translation error:', error);
+      console.error('❌ [DEEPL] Translation error:', error);
+      console.error('❌ [DEEPL] =============================================================\n');
       throw error;
     }
   }
@@ -422,7 +527,14 @@ class TranslationService {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.log(`🐛 Translation Debug: DeepL translation failed: ${errorMessage}`);
-      console.error('Translation failed:', error);
+      console.error('❌ Translation failed:', error);
+      
+      // ❌ DON'T FALLBACK if API key is not configured - this is a CRITICAL ERROR
+      if (errorMessage.includes('DeepL API key not configured')) {
+        console.error('💥 CRITICAL: DeepL API key is NOT configured in database!');
+        console.error('💥 Please set DeepL API key in CMS → API Keys settings');
+        throw new Error('DeepL API key not configured. Please set it in CMS → API Keys.');
+      }
       
       // If rate limit exceeded, try static translation as fallback
       if (errorMessage === 'RATE_LIMIT_EXCEEDED') {

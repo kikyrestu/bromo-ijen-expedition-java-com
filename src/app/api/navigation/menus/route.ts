@@ -1,97 +1,175 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 
-const prisma = new PrismaClient();
+const DEFAULT_LOCATION = 'header';
+
+const DEFAULT_ITEMS = [
+  {
+    order: 1,
+    iconName: 'fa-home',
+    translations: [
+      { language: 'id', title: 'Beranda', url: '/' },
+      { language: 'en', title: 'Home', url: '/' }
+    ]
+  },
+  {
+    order: 2,
+    iconName: 'fa-info-circle',
+    translations: [
+      { language: 'id', title: 'Tentang', url: '/#about' },
+      { language: 'en', title: 'About', url: '/#about' }
+    ]
+  },
+  {
+    order: 3,
+    iconName: 'fa-map-marker-alt',
+    translations: [
+      { language: 'id', title: 'Destinasi', url: '/#destinasi' },
+      { language: 'en', title: 'Destinations', url: '/#destinations' }
+    ]
+  },
+  {
+    order: 4,
+    iconName: 'fa-box',
+    translations: [
+      { language: 'id', title: 'Paket', url: '/#packages' },
+      { language: 'en', title: 'Packages', url: '/#packages' }
+    ]
+  },
+  {
+    order: 5,
+    iconName: 'fa-blog',
+    translations: [
+      { language: 'id', title: 'Blog', url: '/#blog' },
+      { language: 'en', title: 'Blog', url: '/#blog' }
+    ]
+  },
+  {
+    order: 6,
+    iconName: 'fa-envelope',
+    translations: [
+      { language: 'id', title: 'Kontak', url: '/#contact' },
+      { language: 'en', title: 'Contact', url: '/#contact' }
+    ]
+  }
+];
+
+async function ensureMenu(location: string) {
+  let menu = await prisma.navigationMenu.findFirst({ where: { location } });
+
+  if (!menu) {
+    menu = await prisma.navigationMenu.create({
+      data: {
+        name: `${location.replace(/\b\w/g, c => c.toUpperCase())} Menu`,
+        location,
+        isActive: true
+      }
+    });
+  }
+
+  const itemCount = await prisma.navigationItem.count({ where: { menuId: menu.id } });
+  if (itemCount === 0) {
+    for (const item of DEFAULT_ITEMS) {
+      await prisma.navigationItem.create({
+        data: {
+          menuId: menu.id,
+          order: item.order,
+          iconType: 'fontawesome',
+          iconName: item.iconName,
+          translations: {
+            create: item.translations
+          }
+        }
+      });
+    }
+  }
+
+  return menu;
+}
+
+function formatItem(item: any, language: string, menuLocation: string) {
+  const translation = item.translations.find((t: any) => t.language === language)
+    || item.translations.find((t: any) => t.language === 'id')
+    || item.translations[0];
+
+  return {
+    id: item.id,
+    menuId: item.menuId,
+    parentId: item.parentId,
+    order: item.order,
+    isActive: item.isActive,
+    isExternal: item.isExternal,
+    target: item.target,
+    iconType: item.iconType,
+    iconName: item.iconName,
+    iconUrl: item.iconUrl,
+    backgroundColor: item.backgroundColor,
+    textColor: item.textColor,
+    hoverColor: item.hoverColor,
+    activeColor: item.activeColor,
+    fontFamily: item.fontFamily,
+    fontSize: item.fontSize,
+    fontWeight: item.fontWeight,
+    title: translation?.title ?? '',
+    url: translation?.url ?? '#',
+    translations: item.translations,
+    location: menuLocation,
+    children: [] as any[]
+  };
+}
+
+function buildHierarchy(items: any[], language: string, menuLocation: string) {
+  const itemMap = new Map<string, any>();
+  const roots: any[] = [];
+
+  for (const item of items) {
+    itemMap.set(item.id, formatItem(item, language, menuLocation));
+  }
+
+  for (const item of itemMap.values()) {
+    if (item.parentId && itemMap.has(item.parentId)) {
+      itemMap.get(item.parentId)!.children.push(item);
+    } else {
+      roots.push(item);
+    }
+  }
+
+  const sortChildren = (list: any[]) => {
+    list.sort((a, b) => a.order - b.order);
+    list.forEach(child => {
+      if (child.children.length > 0) {
+        sortChildren(child.children);
+      }
+    });
+  };
+
+  sortChildren(roots);
+  return roots;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const location = searchParams.get('location') || 'header';
     const includeItems = searchParams.get('includeItems') === 'true';
+    const language = searchParams.get('language') || 'id';
 
-    // Fetch menu from database
-    const menu = await prisma.navigationMenu.findFirst({
-      where: { location },
-      include: {
-        items: includeItems ? {
-          where: { isActive: true },
-          orderBy: { order: 'asc' },
-          include: {
-            translations: true,
-            children: {
-              orderBy: { order: 'asc' },
-              include: {
-                translations: true
-              }
-            }
-          }
-        } : false
-      }
-    });
+    const menu = await ensureMenu(location);
 
-    if (!menu) {
-      return NextResponse.json(
-        { success: false, error: 'Menu location not found' },
-        { status: 404 }
-      );
-    }
-
-    // Build nested items structure
     let items: any[] = [];
-    if (includeItems && menu.items) {
-      // Filter top-level items (no parent)
-      const topLevelItems = menu.items.filter(item => !item.parentId);
-      
-      items = topLevelItems.map(item => {
-        const itemData: any = {
-          id: item.id,
-          menuId: item.menuId,
-          parentId: item.parentId,
-          order: item.order,
-          isActive: item.isActive,
-          isExternal: item.isExternal,
-          target: item.target,
-          iconType: item.iconType,
-          iconName: item.iconName,
-          iconUrl: item.iconUrl,
-          backgroundColor: item.backgroundColor,
-          textColor: item.textColor,
-          hoverColor: item.hoverColor,
-          activeColor: item.activeColor,
-          fontFamily: item.fontFamily,
-          fontSize: item.fontSize,
-          fontWeight: item.fontWeight,
-          translations: (item as any).translations || [],
-          children: []
-        };
-
-        // Find children for this item
-        const children = menu.items.filter(child => child.parentId === item.id);
-        if (children.length > 0) {
-          itemData.children = children.map(child => ({
-            id: child.id,
-            menuId: child.menuId,
-            parentId: child.parentId,
-            order: child.order,
-            isActive: child.isActive,
-            isExternal: child.isExternal,
-            target: child.target,
-            iconType: child.iconType,
-            iconName: child.iconName,
-            iconUrl: child.iconUrl,
-            backgroundColor: child.backgroundColor,
-            textColor: child.textColor,
-            hoverColor: child.hoverColor,
-            activeColor: child.activeColor,
-            fontFamily: child.fontFamily,
-            fontSize: child.fontSize,
-            fontWeight: child.fontWeight,
-            translations: (child as any).translations || []
-          }));
-        }
-
-        return itemData;
+    if (includeItems) {
+      const dbItems = await prisma.navigationItem.findMany({
+        where: {
+          menuId: menu.id,
+          isActive: true
+        },
+        include: {
+          translations: true
+        },
+        orderBy: [{ order: 'asc' }]
       });
+
+      items = buildHierarchy(dbItems, language, menu.location);
     }
 
     const response = {
@@ -101,7 +179,7 @@ export async function GET(request: NextRequest) {
         name: menu.name,
         location: menu.location,
         isActive: menu.isActive,
-        items: items
+        items
       }]
     };
 

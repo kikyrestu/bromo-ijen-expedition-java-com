@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Globe, CheckCircle, Loader2, Eye, RefreshCw, Bug, Database, AlertCircle } from 'lucide-react';
 
 interface TranslationControlsProps {
@@ -22,6 +22,7 @@ export default function TranslationControls({
   contentId,
   onTranslationComplete
 }: TranslationControlsProps) {
+  const isMountedRef = useRef(true);
   const [translating, setTranslating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +36,18 @@ export default function TranslationControls({
   const [translationStatus, setTranslationStatus] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Debug logging function
   const addDebugLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+    if (!isMountedRef.current) return; // Don't update if unmounted
+    
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
     setDebugLogs(prev => [...prev, logEntry]);
@@ -63,27 +74,44 @@ export default function TranslationControls({
   // Check translation status
   const checkTranslationStatus = async () => {
     try {
+      if (!isMountedRef.current) return; // Don't start if unmounting
+      
       setLoadingStatus(true);
       addDebugLog(`Checking translation status for ${contentType}:${contentId}`);
       
       const response = await fetch(`/api/translations/status?contentType=${contentType}&contentId=${contentId}`);
+      
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       const data = await response.json();
       
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       if (data.success) {
+        if (!isMountedRef.current) return; // Don't update if unmounted
+        
         setTranslationStatus(data.status);
         addDebugLog(`Status check completed: ${JSON.stringify(data.status)}`, 'success');
       } else {
+        if (!isMountedRef.current) return; // Don't update if unmounted
+        
         addDebugLog(`Status check failed: ${data.error}`, 'error');
       }
     } catch (err) {
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       addDebugLog(`Status check error: ${(err as Error).message}`, 'error');
     } finally {
-      setLoadingStatus(false);
+      if (isMountedRef.current) {
+        setLoadingStatus(false);
+      }
     }
   };
 
   const handleTranslate = async (forceRetranslate = false) => {
     try {
+      if (!isMountedRef.current) return; // Don't start if unmounting
+      
       setTranslating(true);
       setSuccess(false);
       setError(null);
@@ -104,15 +132,24 @@ export default function TranslationControls({
         body: JSON.stringify(requestBody)
       });
 
+      if (!isMountedRef.current) return; // Don't update if unmounted
+
       addDebugLog(`API response status: ${response.status} ${response.statusText}`);
       
       const data = await response.json();
+      
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       addDebugLog(`API response data: ${JSON.stringify(data)}`);
 
       if (data.success) {
+        if (!isMountedRef.current) return; // Don't update if unmounted
+        
         setSuccess(true);
         addDebugLog(`Translation triggered successfully!`, 'success');
-        setTimeout(() => setSuccess(false), 3000);
+        setTimeout(() => {
+          if (isMountedRef.current) setSuccess(false);
+        }, 3000);
         
         if (onTranslationComplete) {
           addDebugLog(`Calling onTranslationComplete callback`);
@@ -121,26 +158,36 @@ export default function TranslationControls({
         
         // Refresh status after successful translation
         setTimeout(() => {
-          addDebugLog(`Refreshing translation status after successful translation`);
-          checkTranslationStatus();
+          if (isMountedRef.current) {
+            addDebugLog(`Refreshing translation status after successful translation`);
+            checkTranslationStatus();
+          }
         }, 2000);
       } else {
+        if (!isMountedRef.current) return; // Don't update if unmounted
+        
         const errorMsg = data.error || 'Translation failed';
         setError(errorMsg);
         addDebugLog(`Translation failed: ${errorMsg}`, 'error');
       }
     } catch (err) {
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       const errorMsg = 'Network error: ' + (err as Error).message;
       setError(errorMsg);
       addDebugLog(`Network error: ${errorMsg}`, 'error');
     } finally {
-      setTranslating(false);
-      addDebugLog(`Translation process completed`);
+      if (isMountedRef.current) {
+        setTranslating(false);
+        addDebugLog(`Translation process completed`);
+      }
     }
   };
 
   const handlePreview = async (langCode: string) => {
     try {
+      if (!isMountedRef.current) return; // Don't start if unmounting
+      
       setLoadingPreview(true);
       setPreviewLang(langCode);
       setPreviewData(null);
@@ -170,26 +217,40 @@ export default function TranslationControls({
       addDebugLog(`Making preview API call`);
 
       const response = await fetch(endpoint);
+      
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       addDebugLog(`Preview API response status: ${response.status} ${response.statusText}`);
       
       const result = await response.json();
+      
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       addDebugLog(`Preview API response data: ${JSON.stringify(result)}`);
 
       if (result.success) {
+        if (!isMountedRef.current) return; // Don't update if unmounted
+        
         setPreviewData(result.data);
         addDebugLog(`Preview loaded successfully for ${langCode}`, 'success');
       } else {
+        if (!isMountedRef.current) return; // Don't update if unmounted
+        
         const errorMsg = 'Failed to load preview';
         setError(errorMsg);
         addDebugLog(`Preview failed: ${errorMsg}`, 'error');
       }
     } catch (err) {
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       const errorMsg = 'Preview error: ' + (err as Error).message;
       setError(errorMsg);
       addDebugLog(`Preview error: ${errorMsg}`, 'error');
     } finally {
-      setLoadingPreview(false);
-      addDebugLog(`Preview process completed`);
+      if (isMountedRef.current) {
+        setLoadingPreview(false);
+        addDebugLog(`Preview process completed`);
+      }
     }
   };
 

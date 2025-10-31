@@ -127,35 +127,29 @@ const TestimonialSection = ({ overrideContent }: TestimonialSectionProps) => {
   const currentItem = content.testimonials[currentTestimonial] || content.testimonials[0];
 
   return (
-    <section id="testimonials" className="py-20 bg-white">
+    <section id="testimonials" className="py-16 sm:py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* Clean Header */}
         <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-          <div className="grid lg:grid-cols-2 gap-8 items-start mb-16">
-          <div>
-            {/* Subtitle */}
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <Compass className="w-4 h-4 text-orange-600" />
-              </div>
-              <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+          <div className="text-center mb-12">
+            {/* Badge */}
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full mb-4">
+              <Quote className="w-4 h-4 text-orange-600" />
+              <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
                 {content.subtitle}
               </span>
             </div>
 
-            {/* Main Title */}
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            {/* Title */}
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               {content.title}
             </h2>
-          </div>
-          
-          <div>
+            
             {content.description && (
-              <p className="text-lg text-gray-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 {content.description}
               </p>
             )}
-          </div>
           </div>
         </AnimatedSection>
 

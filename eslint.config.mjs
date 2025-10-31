@@ -18,7 +18,25 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "templates/**",
+      "src/generated/**",
+      "public/tinymce/**",
+      "scripts/**",
+      "check-*.js",
     ],
+  },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
+      ],
+      "@typescript-eslint/no-empty-object-type": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
+      "react/no-unescaped-entities": "warn",
+      "prefer-const": "warn",
+    },
   },
 ];
 

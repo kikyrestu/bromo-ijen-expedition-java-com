@@ -2,6 +2,7 @@
 
 import { useState, use, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { t } from '@/lib/static-translations';
 import Link from 'next/link';
 import { 
   Calendar, 
@@ -92,7 +93,7 @@ export default function BlogDetailClient({ params }: BlogDetailClientProps) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading blog post...</p>
+          <p className="text-gray-600">{t('loadingBlogPost', currentLanguage)}</p>
         </div>
       </div>
     );
@@ -103,14 +104,14 @@ export default function BlogDetailClient({ params }: BlogDetailClientProps) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <BookOpen className="w-24 h-24 text-gray-300 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Blog Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('blogNotFound', currentLanguage)}</h1>
           <p className="text-gray-600 mb-6">The blog post you're looking for doesn't exist.</p>
           <Link 
             href={getLocalizedUrl('/blog')}
             className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Blog
+            {t('backToBlog', currentLanguage)}
           </Link>
         </div>
       </div>
@@ -141,11 +142,11 @@ export default function BlogDetailClient({ params }: BlogDetailClientProps) {
               {/* Category & Featured Badge */}
               <div className="flex items-center space-x-2 mb-4">
                 <span className="px-4 py-1 bg-orange-600 text-white text-sm font-medium rounded-full">
-                  {blog.category || 'Uncategorized'}
+                  {blog.category || t('uncategorized', currentLanguage)}
                 </span>
                 {blog.featured && (
                   <span className="px-4 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
-                    Featured
+                    {t('featured', currentLanguage)}
                   </span>
                 )}
               </div>
@@ -205,7 +206,7 @@ export default function BlogDetailClient({ params }: BlogDetailClientProps) {
 
             <button className="flex items-center space-x-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all duration-300">
               <Share2 className="w-5 h-5" />
-              <span className="font-medium">Share</span>
+              <span className="font-medium">{t('share', currentLanguage)}</span>
             </button>
           </div>
 
@@ -229,7 +230,7 @@ export default function BlogDetailClient({ params }: BlogDetailClientProps) {
             <div className="mt-12 pt-8 border-t border-gray-200">
               <div className="flex items-center space-x-2 mb-6">
                 <Tag className="w-6 h-6 text-orange-600" />
-                <h3 className="text-xl font-bold text-gray-900">Tags</h3>
+                <h3 className="text-xl font-bold text-gray-900">{t('tags', currentLanguage)}</h3>
               </div>
               <div className="flex flex-wrap gap-3">
                 {blog.tags.map((tag: string, index: number) => (
@@ -252,14 +253,14 @@ export default function BlogDetailClient({ params }: BlogDetailClientProps) {
               className="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold transition-colors"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Blog
+              {t('backToBlog', currentLanguage)}
             </Link>
 
             <Link 
               href={getLocalizedUrl('/packages')}
               className="inline-flex items-center bg-orange-600 text-white px-6 py-3 rounded-xl hover:bg-orange-700 font-semibold transition-colors"
             >
-              Book Tour
+              {t('bookTour', currentLanguage)}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
           </div>

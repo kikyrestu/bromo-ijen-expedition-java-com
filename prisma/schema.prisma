@@ -36,6 +36,14 @@ model SectionContent {
   category        String?  @db.VarChar(100)
   sortBy          String?  @db.VarChar(50)
   layoutStyle     String?  @db.VarChar(50)
+  // Gallery-specific settings
+  showFilters     Boolean? @default(true)
+  enableLightbox  Boolean? @default(true)
+  // Animation settings (for Carousel & other animated layouts)
+  enableAutoSlide Boolean? @default(false)
+  autoSlideInterval Int?   @default(5)
+  transitionEffect String? @db.VarChar(50) @default("smooth")
+  animationSpeed  String?  @db.VarChar(50) @default("normal")
   updatedAt       DateTime @updatedAt @db.Timestamp(0)
   createdAt       DateTime @default(now()) @db.Timestamp(0)
 
@@ -171,6 +179,12 @@ model Settings {
   memberSince            String   @default("14 May 2024") @db.VarChar(50)
   providerPhone          String   @default("+62 812-3456-7890") @db.VarChar(20)
   providerEmail          String   @default("info@bromotour.com") @db.VarChar(255)
+  // General Branding Settings
+  brandName              String?  @db.VarChar(255)
+  siteLogo               String?  @db.VarChar(255)
+  siteTagline            String?  @db.VarChar(255)
+  favicon                String?  @db.VarChar(255)
+  // SEO Settings
   siteName               String   @default("Bromo Ijen Tour & Travel") @db.VarChar(255)
   siteDescription        String?  @db.Text
   defaultOgImage         String   @default("/og-default.jpg") @db.VarChar(255)
@@ -306,6 +320,61 @@ model NavigationItemTranslation {
 
   @@unique([itemId, language])
   @@map("navigation_item_translations")
+}
+
+model Banner {
+  id             String             @id @default(cuid())
+  slug           String             @unique @db.VarChar(150)
+  name           String             @db.VarChar(150)
+  title          String?            @db.VarChar(200)
+  subtitle       String?            @db.VarChar(255)
+  description    String?            @db.Text
+  displayType    String             @default("image") @db.VarChar(50)
+  imageUrl       String?            @db.VarChar(255)
+  backgroundColor String?           @db.VarChar(20)
+  overlayColor   String?            @db.VarChar(20)
+  ctaText        String?            @db.VarChar(120)
+  ctaUrl         String?            @db.VarChar(255)
+  isActive       Boolean            @default(true)
+  customHtml     String?            @db.Text
+  createdBy      String?            @db.VarChar(100)
+  updatedBy      String?            @db.VarChar(100)
+  createdAt      DateTime           @default(now()) @db.Timestamp(0)
+  updatedAt      DateTime           @updatedAt @db.Timestamp(0)
+  translations   BannerTranslation[]
+  placements     BannerPlacement[]
+
+  @@map("banners")
+}
+
+model BannerTranslation {
+  id          String   @id @default(cuid())
+  bannerId    String   @db.VarChar(255)
+  language    String   @db.VarChar(5)
+  title       String?  @db.VarChar(200)
+  subtitle    String?  @db.VarChar(255)
+  description String?  @db.Text
+  ctaText     String?  @db.VarChar(120)
+  ctaUrl      String?  @db.VarChar(255)
+  imageUrl    String?  @db.VarChar(255)
+  banner      Banner   @relation(fields: [bannerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([bannerId, language])
+  @@map("banner_translations")
+}
+
+model BannerPlacement {
+  id         String   @id @default(cuid())
+  bannerId   String   @db.VarChar(255)
+  location   String   @db.VarChar(100)
+  position   Int      @default(0)
+  isActive   Boolean  @default(true)
+  startDate  DateTime? @db.Timestamp(0)
+  endDate    DateTime? @db.Timestamp(0)
+  banner     Banner   @relation(fields: [bannerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([location, position])
+  @@map("banner_placements")
 }
 
 model TopbarSettings {
@@ -448,13 +517,67 @@ model SectionContentTranslation {
   description      String?  @db.Text
   ctaText          String?  @db.VarChar(255)
   buttonText       String?  @db.VarChar(255)
+  phone            String?  @db.VarChar(100)
+  email            String?  @db.VarChar(255)
   destinations     String?  @db.Text
   features         String?  @db.Text
   stats            String?  @db.Text
+  packages         String?  @db.Text
+  testimonials     String?  @db.Text
+  posts            String?  @db.Text
+  items            String?  @db.Text
+  categories       String?  @db.Text
   isAutoTranslated Boolean  @default(false)
   createdAt        DateTime @default(now()) @db.Timestamp(0)
   updatedAt        DateTime @updatedAt @db.Timestamp(0)
 
   @@unique([sectionId, language])
   @@map("section_content_translations")
+}
+
+model ApiKeySettings {
+  id        String   @id @default("default") @db.VarChar(50)
+  keys      String?  @db.LongText // JSON string containing encrypted API keys
+  updatedAt DateTime @updatedAt @db.Timestamp(0)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("api_key_settings")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique @db.VarChar(60)
+  email         String    @unique @db.VarChar(255)
+  password      String    @db.VarChar(255) // Hashed password
+  displayName   String    @db.VarChar(250)
+  firstName     String?   @db.VarChar(100)
+  lastName      String?   @db.VarChar(100)
+  role          String    @default("subscriber") @db.VarChar(20) // administrator, editor, author, contributor, subscriber
+  status        String    @default("active") @db.VarChar(20) // active, inactive, banned
+  avatar        String?   @db.VarChar(255)
+  bio           String?   @db.Text
+  website       String?   @db.VarChar(255)
+  lastLoginAt   DateTime? @db.Timestamp(0)
+  lastLoginIp   String?   @db.VarChar(45)
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime? @db.Timestamp(0)
+  createdAt     DateTime  @default(now()) @db.Timestamp(0)
+  updatedAt     DateTime  @updatedAt @db.Timestamp(0)
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @db.VarChar(255)
+  token     String   @unique @db.VarChar(500)
+  expiresAt DateTime @db.Timestamp(0)
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }

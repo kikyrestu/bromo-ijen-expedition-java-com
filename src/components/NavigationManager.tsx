@@ -13,12 +13,15 @@ import {
   Smartphone,
   Monitor,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Save,
   X,
   Eye,
   EyeOff
 } from 'lucide-react';
+import Toast from './Toast';
+import ConfirmDialog from './ConfirmDialog';
 
 interface NavigationMenu {
   id: string;
@@ -100,10 +103,49 @@ const NavigationManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<NavigationItem | null>(null);
+  
+  // Define a type for the language object
+  interface LanguageOption {
+    code: string;
+    name: string;
+    flag: string;
+  }
+  
+  const languages: LanguageOption[] = [
+    { code: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    { code: 'zh', name: '中文', flag: '🇨🇳' },
+    { code: 'nl', name: 'Nederlands', flag: '🇳🇱' }
+  ];
+  
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Form states
-  const [itemForm, setItemForm] = useState({
+  const [itemForm, setItemForm] = useState<{
+    title: string;
+    url: string;
+    iconType: string;
+    iconName: string;
+    iconUrl: string;
+    isExternal: boolean;
+    target: string;
+    backgroundColor: string;
+    textColor: string;
+    hoverColor: string;
+    activeColor: string;
+    fontFamily: string;
+    fontSize: string;
+    fontWeight: string;
+    parentId: string | null;
+    translations: Array<{
+      id: string;
+      itemId: string;
+      language: string;
+      title: string;
+      url: string;
+    }>;
+  }>({
     title: '',
     url: '',
     iconType: 'fontawesome',
@@ -118,8 +160,8 @@ const NavigationManager: React.FC = () => {
     fontFamily: '',
     fontSize: '',
     fontWeight: '',
-    parentId: null as string | null,
-    translations: [] as any[]
+    parentId: null,
+    translations: []
   });
 
   const [topbarForm, setTopbarForm] = useState({
@@ -150,13 +192,99 @@ const NavigationManager: React.FC = () => {
     languageSwitcherPosition: 'topbar'
   });
 
-  const languages = [
-    { code: 'id', name: 'Indonesian', flag: '🇮🇩' },
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'de', name: 'German', flag: '🇩🇪' },
-    { code: 'cn', name: 'Chinese', flag: '🇨🇳' },
-    { code: 'ru', name: 'Russian', flag: '🇷🇺' }
-  ];
+  // Toast and Confirm Dialog state
+  const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'warning' | 'info'; message: string }>({
+    show: false,
+    type: 'success',
+    message: ''
+  });
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'warning'
+  });
+
+  // Toast helper
+  const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+    setToast({ show: true, type, message });
+  };
+
+  const handleMoveItem = async (itemId: string, direction: 'up' | 'down') => {
+    const mainMenu = menus.find(m => m.location === 'header');
+    if (!mainMenu) return;
+
+    const reorderItems = (items: NavigationItem[]): { items: NavigationItem[]; changed: boolean } => {
+      const index = items.findIndex(item => item.id === itemId);
+      if (index !== -1) {
+        const swapIndex = direction === 'up' ? index - 1 : index + 1;
+        if (swapIndex < 0 || swapIndex >= items.length) {
+          return { items, changed: false };
+        }
+        const newItems = items.slice();
+        [newItems[index], newItems[swapIndex]] = [newItems[swapIndex], newItems[index]];
+        return { items: newItems, changed: true };
+      }
+
+      let changed = false;
+      const newItems = items.map(item => {
+        if (item.children && item.children.length > 0) {
+          const result = reorderItems(item.children);
+          if (result.changed) {
+            changed = true;
+            return { ...item, children: result.items };
+          }
+        }
+        return item;
+      });
+
+      return { items: newItems, changed };
+    };
+
+    const result = reorderItems(mainMenu.items);
+    if (!result.changed) return;
+
+    const previousMenus = menus;
+    const newMenus = menus.map(menu =>
+      menu.location === 'header' ? { ...menu, items: result.items } : menu
+    );
+
+    setMenus(newMenus);
+
+    try {
+      const response = await fetch('/api/navigation/items', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: itemId, direction })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showToast('success', `Menu item moved ${direction}`);
+        await fetchData({ showLoading: false });
+      } else {
+        setMenus(previousMenus);
+        showToast('error', data.error || 'Failed to move item');
+      }
+    } catch (error) {
+      console.error('Error moving item:', error);
+      setMenus(previousMenus);
+      showToast('error', 'Error moving item');
+    }
+  };
+
+  // Confirm helper
+  const showConfirm = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'warning') => {
+    setConfirmDialog({ show: true, title, message, onConfirm, type });
+  };
 
   const fontAwesomeIcons = [
     'home', 'package', 'blog', 'images', 'phone', 'mail', 'user', 'search',
@@ -168,17 +296,34 @@ const NavigationManager: React.FC = () => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? true;
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       
-      // Fetch menus
-      const menusResponse = await fetch('/api/navigation/menus?includeItems=true');
-      const menusData = await menusResponse.json();
-      if (menusData.success) {
-        // Ensure menus is always an array
-        const menusArray = Array.isArray(menusData.data) ? menusData.data : [];
-        setMenus(menusArray);
+      // Fetch items directly from items API (returns hierarchical structure)
+      const itemsResponse = await fetch('/api/navigation/items?location=header');
+      const itemsData = await itemsResponse.json();
+      if (itemsData.success && itemsData.data) {
+        const menuMeta = itemsData.meta?.menu;
+        const structuredMenu: NavigationMenu = {
+          id: menuMeta?.id || 'header',
+          name: menuMeta?.name || 'Main Menu',
+          location: menuMeta?.location || 'header',
+          isActive: menuMeta?.isActive ?? true,
+          items: itemsData.data
+        };
+        setMenus([structuredMenu]);
+      } else {
+        // Fallback: fetch from menus API
+        const menusResponse = await fetch('/api/navigation/menus?includeItems=true');
+        const menusData = await menusResponse.json();
+        if (menusData.success) {
+          const menusArray = Array.isArray(menusData.data) ? menusData.data : [];
+          setMenus(menusArray);
+        }
       }
 
       // Fetch settings
@@ -216,7 +361,9 @@ const NavigationManager: React.FC = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -225,11 +372,56 @@ const NavigationManager: React.FC = () => {
       const mainMenu = menus.find(m => m.location === 'header');
       if (!mainMenu) return;
 
+      // Convert simple title/url to translations array if translations is empty
+      const defaultLanguageCode = languages[0]?.code ?? 'id';
+      let translations = itemForm.translations;
+
+      if (!translations || translations.length === 0) {
+        // If user filled title and url directly, create translations for all languages
+        if (itemForm.title && itemForm.url) {
+          translations = languages.map(lang => ({
+            id: `${Date.now()}-${lang.code}`,
+            itemId: editingItem?.id || '',
+            language: lang.code,
+            title: itemForm.title,
+            url: itemForm.url
+          }));
+        }
+      } else {
+        let hasDefaultTranslation = false;
+
+        translations = translations.map(translation => {
+          if ((translation?.language ?? '') === defaultLanguageCode) {
+            hasDefaultTranslation = true;
+            return {
+              ...translation,
+              title: itemForm.title || translation.title,
+              url: itemForm.url || translation.url
+            };
+          }
+          return translation;
+        });
+
+        if (!hasDefaultTranslation && itemForm.title && itemForm.url) {
+          translations = [
+            ...translations,
+            {
+              id: `${Date.now()}-${defaultLanguageCode}`,
+              itemId: editingItem?.id || '',
+              language: defaultLanguageCode,
+              title: itemForm.title,
+              url: itemForm.url
+            }
+          ];
+        }
+      }
+
       const itemData = {
         id: editingItem?.id,
         menuId: mainMenu.id,
+        location: mainMenu.location,
         parentId: itemForm.parentId || null,
-        order: editingItem?.order || 0,
+        order: editingItem?.order || undefined,
         isActive: true,
         isExternal: itemForm.isExternal,
         target: itemForm.target,
@@ -243,7 +435,7 @@ const NavigationManager: React.FC = () => {
         fontFamily: itemForm.fontFamily,
         fontSize: itemForm.fontSize,
         fontWeight: itemForm.fontWeight,
-        translations: itemForm.translations
+        translations: translations
       };
 
       const url = editingItem ? '/api/navigation/items' : '/api/navigation/items';
@@ -265,33 +457,41 @@ const NavigationManager: React.FC = () => {
         setShowItemModal(false);
         setEditingItem(null);
         resetItemForm();
+        showToast('success', editingItem ? 'Menu item updated successfully!' : 'Menu item created successfully!');
       } else {
-        alert('Error saving item: ' + data.error);
+        showToast('error', 'Error saving item: ' + data.error);
       }
     } catch (error) {
       console.error('Error saving item:', error);
-      alert('Error saving item');
+      showToast('error', 'Error saving item');
     }
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+    showConfirm(
+      'Delete Menu Item',
+      'Are you sure you want to delete this menu item? This action cannot be undone.',
+      async () => {
+        try {
+          const response = await fetch(`/api/navigation/items?id=${itemId}`, {
+            method: 'DELETE'
+          });
 
-    try {
-      const response = await fetch(`/api/navigation/items?id=${itemId}`, {
-        method: 'DELETE'
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        await fetchData();
-      } else {
-        alert('Error deleting item: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      alert('Error deleting item');
-    }
+          const data = await response.json();
+          if (data.success) {
+            await fetchData();
+            showToast('success', 'Menu item deleted successfully!');
+          } else {
+            showToast('error', 'Error deleting item: ' + data.error);
+          }
+        } catch (error) {
+          console.error('Error deleting item:', error);
+          showToast('error', 'Error deleting item');
+        }
+        setConfirmDialog({ ...confirmDialog, show: false });
+      },
+      'danger'
+    );
   };
 
   const handleSaveSettings = async (type: 'topbar' | 'mobile' | 'language') => {
@@ -319,13 +519,13 @@ const NavigationManager: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         await fetchData();
-        alert('Settings saved successfully!');
+        showToast('success', 'Settings saved successfully!');
       } else {
-        alert('Error saving settings: ' + result.error);
+        showToast('error', 'Error saving settings: ' + result.error);
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Error saving settings');
+      showToast('error', 'Error saving settings');
     }
   };
 
@@ -375,9 +575,8 @@ const NavigationManager: React.FC = () => {
     } else {
       setEditingItem(null);
       resetItemForm();
-      // Set parent ID if creating a submenu
       if (parentItemId) {
-        setItemForm({ ...itemForm, parentId: parentItemId });
+        setItemForm(prev => ({ ...prev, parentId: parentItemId }));
       }
     }
     setShowItemModal(true);
@@ -434,6 +633,28 @@ const NavigationManager: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 mr-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMoveItem(item.id, 'up');
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded"
+                title="Move Up"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMoveItem(item.id, 'down');
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded"
+                title="Move Down"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -864,6 +1085,24 @@ const NavigationManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ ...toast, show: false })}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        show={confirmDialog.show}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ ...confirmDialog, show: false })}
+      />
     </div>
   );
 };

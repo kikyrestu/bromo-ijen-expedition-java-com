@@ -275,6 +275,13 @@ const DEFAULT_TRANSLATIONS: Record<string, Record<Language, string>> = {
     nl: 'Blog & Verhalen',
     zh: '博客与故事'
   },
+  'blog.subtitle': {
+    id: 'Jurnal Perjalanan',
+    en: 'Travel Journal',
+    de: 'Reisetagebuch',
+    nl: 'Reisjournaal',
+    zh: '旅行日志'
+  },
   'blog.description': {
     id: 'Tips perjalanan, panduan, dan kisah petualangan dari perjalanan kami',
     en: 'Travel tips, guides, and adventure stories from our journeys',
@@ -288,6 +295,97 @@ const DEFAULT_TRANSLATIONS: Record<string, Record<Language, string>> = {
     de: 'Artikel suchen...',
     nl: 'Zoek artikelen...',
     zh: '搜索文章...'
+  },
+  'blog.categories.all': {
+    id: 'Semua Artikel',
+    en: 'All Posts',
+    de: 'Alle Beiträge',
+    nl: 'Alle Berichten',
+    zh: '全部文章'
+  },
+  'blog.categories.travelTips': {
+    id: 'Tips Perjalanan',
+    en: 'Travel Tips',
+    de: 'Reisetipps',
+    nl: 'Reistips',
+    zh: '旅行提示'
+  },
+  'blog.categories.travelGuides': {
+    id: 'Panduan Perjalanan',
+    en: 'Travel Guides',
+    de: 'Reiseführer',
+    nl: 'Reisgidsen',
+    zh: '旅行指南'
+  },
+  'blog.categories.adventure': {
+    id: 'Petualangan',
+    en: 'Adventure',
+    de: 'Abenteuer',
+    nl: 'Avontuur',
+    zh: '冒险'
+  },
+  'blog.categories.stories': {
+    id: 'Cerita Perjalanan',
+    en: 'Travel Stories',
+    de: 'Reisegeschichten',
+    nl: 'Reisverhalen',
+    zh: '旅行故事'
+  },
+  'blog.resultsCount': {
+    id: '{count} artikel ditemukan',
+    en: '{count} articles found',
+    de: '{count} Artikel gefunden',
+    nl: '{count} artikelen gevonden',
+    zh: '找到 {count} 篇文章'
+  },
+  'blog.emptyTitle': {
+    id: 'Artikel tidak ditemukan',
+    en: 'No articles found',
+    de: 'Keine Artikel gefunden',
+    nl: 'Geen artikelen gevonden',
+    zh: '未找到文章'
+  },
+  'blog.emptyDescription': {
+    id: 'Coba ubah kata kunci pencarian atau filter kamu',
+    en: 'Try adjusting your search or filter criteria',
+    de: 'Passen Sie Ihre Suche oder Filterkriterien an',
+    nl: 'Pas je zoekopdracht of filtercriteria aan',
+    zh: '尝试调整搜索或筛选条件'
+  },
+  'blog.featuredBadge': {
+    id: 'Unggulan',
+    en: 'Featured',
+    de: 'Empfohlen',
+    nl: 'Uitgelicht',
+    zh: '精选'
+  },
+  'blog.highlightBadge': {
+    id: 'Highlight',
+    en: 'Highlight',
+    de: 'Highlight',
+    nl: 'Highlight',
+    zh: '亮点'
+  },
+  'blog.categoryDefault': {
+    id: 'Tanpa Kategori',
+    en: 'Uncategorized',
+    de: 'Ohne Kategorie',
+    nl: 'Geen categorie',
+    zh: '未分类'
+  },
+  'blog.heroCta': {
+    id: 'Baca Selengkapnya',
+    en: 'Read More',
+    de: 'Mehr Lesen',
+    nl: 'Lees Meer',
+    zh: '阅读更多'
+  },
+  'blog.cardCta': {
+    id: 'Baca Artikel',
+    en: 'Read Article',
+    de: 'Artikel Lesen',
+    nl: 'Artikel Lezen',
+    zh: '阅读文章'
   },
   // Navigation translations
   'nav.bookNow': {
@@ -399,14 +497,67 @@ export default function LanguageProvider({ children, initialLanguage }: Language
       return; // No need to change if same language
     }
 
+    console.log('🌍 setLanguage called with:', language);
+    
     // Set loading states
     setIsTranslating(true);
     setTargetLanguage(language);
     
-    // Delay the actual language change to show loading
+    // Update URL IMMEDIATELY
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      console.log('🌍 Current pathname:', currentPath);
+      
+      // Extract base path without language prefix
+      let basePath = currentPath;
+      
+      // Remove any existing language prefix (/en, /de, /nl, /zh, /id)
+      const langPrefixRegex = /^\/(id|en|de|nl|zh)(\/|$)/;
+      const match = currentPath.match(langPrefixRegex);
+      
+      if (match) {
+        // Has language prefix, remove it
+        basePath = currentPath.replace(langPrefixRegex, '/');
+        console.log('🌍 Removed lang prefix, basePath:', basePath);
+      } else {
+        // No language prefix (Indonesian default)
+        basePath = currentPath;
+        console.log('🌍 No lang prefix (Indonesian), basePath:', basePath);
+      }
+      
+      // Ensure basePath starts with /
+      if (!basePath.startsWith('/')) {
+        basePath = '/' + basePath;
+      }
+      
+      // Handle empty path
+      if (basePath === '' || basePath === '/') {
+        basePath = '/';
+      }
+      
+      // Build new URL
+      let targetUrl = '';
+      if (language === 'id') {
+        // Indonesian = no prefix
+        targetUrl = basePath;
+      } else {
+        // Other languages = with prefix
+        if (basePath === '/') {
+          targetUrl = `/${language}`;
+        } else {
+          targetUrl = `/${language}${basePath}`;
+        }
+      }
+      
+      console.log('🌍 Redirecting to:', targetUrl);
+      
+      // Force redirect
+      window.location.href = targetUrl;
+    }
+    
+    // Update context (this will run but page will redirect anyway)
     setTimeout(() => {
       setCurrentLanguage(language);
-      // URL update will be handled by useLanguageSwitcher hook
     }, 30);
   };
 

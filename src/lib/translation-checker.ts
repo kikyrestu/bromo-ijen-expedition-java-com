@@ -418,18 +418,106 @@ export async function checkGalleryTranslations(): Promise<SectionCoverage> {
 }
 
 /**
+ * Check translation coverage untuk Section Content (Hero, About, etc)
+ */
+export async function checkSectionContentTranslations(): Promise<SectionCoverage> {
+  const sections = await prisma.sectionContent.findMany({
+    select: { sectionId: true, title: true }
+  });
+
+  const items: TranslationStatus[] = [];
+
+  for (const section of sections) {
+    const translations = await prisma.sectionContentTranslation.findMany({
+      where: { sectionId: section.sectionId }
+    });
+
+    const languageStatuses: Record<string, LanguageStatus> = {
+      id: { exists: true, isAutoTranslated: false, completeness: 100, missingFields: [] } // Source language
+    };
+
+    // Check each target language
+    for (const lang of ['en', 'de', 'nl', 'zh'] as const) {
+      const translation = translations.find(t => t.language === lang);
+      
+      if (translation) {
+        // Check completeness
+        const fields = ['title', 'subtitle', 'description', 'ctaText'];
+        
+        const filledFields = fields.filter(field => {
+          const value = translation[field as keyof typeof translation];
+          return value !== null && value !== undefined && value !== '';
+        });
+
+        const missingFields = fields.filter(field => {
+          const value = translation[field as keyof typeof translation];
+          return value === null || value === undefined || value === '';
+        });
+
+        languageStatuses[lang] = {
+          exists: true,
+          isAutoTranslated: translation.isAutoTranslated,
+          completeness: (filledFields.length / fields.length) * 100,
+          missingFields
+        };
+      } else {
+        languageStatuses[lang] = {
+          exists: false,
+          isAutoTranslated: false,
+          completeness: 0,
+          missingFields: ['all']
+        };
+      }
+    }
+
+    // Calculate overall coverage
+    const languageCoverages = Object.values(languageStatuses).map(s => s.completeness);
+    const overallCoverage = languageCoverages.reduce((a, b) => a + b, 0) / languageCoverages.length;
+
+    const missingLanguages = Object.entries(languageStatuses)
+      .filter(([_, status]) => !status.exists || status.completeness < 100)
+      .map(([lang]) => lang);
+
+    const status: 'complete' | 'partial' | 'missing' = 
+      overallCoverage === 100 ? 'complete' :
+      overallCoverage > 0 ? 'partial' : 'missing';
+
+    items.push({
+      section: 'sections',
+      contentId: section.sectionId,
+      contentTitle: section.title || section.sectionId,
+      languages: languageStatuses as any,
+      overallCoverage,
+      missingLanguages,
+      status
+    });
+  }
+
+  const translatedItems = items.filter(item => item.status === 'complete').length;
+
+  return {
+    section: 'sections',
+    totalItems: sections.length,
+    translatedItems,
+    coveragePercentage: sections.length > 0 ? (translatedItems / sections.length) * 100 : 0,
+    items
+  };
+}
+
+/**
  * Check ALL sections
  */
 export async function checkAllTranslations() {
-  const [packages, blogs, testimonials, gallery] = await Promise.all([
+  const [sections, packages, blogs, testimonials, gallery] = await Promise.all([
+    checkSectionContentTranslations(),
     checkPackageTranslations(),
     checkBlogTranslations(),
     checkTestimonialTranslations(),
     checkGalleryTranslations()
   ]);
 
-  const totalItems = packages.totalItems + blogs.totalItems + testimonials.totalItems + gallery.totalItems;
-  const translatedItems = packages.translatedItems + blogs.translatedItems + testimonials.translatedItems + gallery.translatedItems;
+  const totalItems = sections.totalItems + packages.totalItems + blogs.totalItems + testimonials.totalItems + gallery.totalItems;
+  const translatedItems = sections.translatedItems + packages.translatedItems + blogs.translatedItems + testimonials.translatedItems + gallery.translatedItems;
 
   return {
     summary: {
@@ -438,6 +526,7 @@ export async function checkAllTranslations() {
       overallCoverage: totalItems > 0 ? (translatedItems / totalItems) * 100 : 0
     },
     sections: {
+      sections,
       packages,
       blogs,
       testimonials,
@@ -453,6 +542,7 @@ export async function getItemsNeedingTranslation() {
   const allTranslations = await checkAllTranslations();
   
   const needsTranslation = {
+    sections: allTranslations.sections.sections.items.filter(item => item.status !== 'complete'),
     packages: allTranslations.sections.packages.items.filter(item => item.status !== 'complete'),
     blogs: allTranslations.sections.blogs.items.filter(item => item.status !== 'complete'),
     testimonials: allTranslations.sections.testimonials.items.filter(item => item.status !== 'complete'),

@@ -13,12 +13,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use Prisma for better connection pooling
+    // Check if this specific section has translations (should be 4 languages: en, de, nl, zh)
     const count = await prisma.sectionContentTranslation.count({
-      where: { sectionId }
+      where: { 
+        sectionId: sectionId  // CRITICAL: Only check THIS specific section
+      }
     });
 
+    // A section is considered "translated" if it has at least 1 translation
+    // (ideally should have 4 for all languages)
     const hasTranslation = count > 0;
+
+    console.log(`🔍 Translation Status Check: Section "${sectionId}" has ${count} translations (hasTranslation: ${hasTranslation})`);
 
     return NextResponse.json({
       success: true,

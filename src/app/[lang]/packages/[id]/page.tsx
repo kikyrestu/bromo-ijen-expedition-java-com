@@ -7,6 +7,8 @@ import Footer from '@/components/Footer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { generateTourPackageSchema } from '@/lib/seo-utils';
 import { sanitizeHtml } from '@/lib/html-utils';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { t } from '@/lib/static-translations';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -33,8 +35,23 @@ import {
   Sun
 } from 'lucide-react';
 
-const PackageDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
+// Helper function to safely parse JSON fields
+const safeParse = (value: any, fallback: any = []) => {
+  if (!value) return fallback;
+  if (Array.isArray(value)) return value; // Already parsed
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+};
+
+const PackageDetailPage = ({ params }: { params: Promise<{ id: string; lang: string }> }) => {
   const resolvedParams = use(params);
+  const { currentLanguage } = useLanguage();
   const [packageData, setPackageData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('2025-10-19');
@@ -100,13 +117,23 @@ const PackageDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   useEffect(() => {
     const fetchPackage = async () => {
       try {
-        const response = await fetch(`/api/packages?includeAll=true`);
+        // Build query parameters with language
+        const queryParams = new URLSearchParams();
+        queryParams.append('includeAll', 'true');
+        if (currentLanguage !== 'id') {
+          queryParams.append('language', currentLanguage);
+        }
+        
+        console.log(`📦 Fetching package with language: ${currentLanguage}`);
+        const response = await fetch(`/api/packages?${queryParams.toString()}`);
         const data = await response.json();
         
         if (data.success) {
           // Try to find by slug first, fallback to ID for backward compatibility
           const pkg = data.data.find((p: any) => p.slug === resolvedParams.id || p.id === resolvedParams.id);
           if (pkg) {
+            console.log(`✅ Package found:`, pkg.title);
+            console.log(`🌍 Language: ${currentLanguage}, Translated: ${pkg._isTranslated || 'using database translation'}`);
             setPackageData(pkg);
           }
         }
@@ -118,7 +145,7 @@ const PackageDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
     };
 
     fetchPackage();
-  }, [resolvedParams.id]);
+  }, [resolvedParams.id, currentLanguage]);
 
   // Helper functions for date formatting
   const formatDate = (date: Date) => {
@@ -208,7 +235,7 @@ Terima kasih! 🙏`;
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading package details...</p>
+            <p className="text-gray-600">{t('loadingPackageDetails', currentLanguage)}</p>
           </div>
         </div>
       </div>
@@ -223,7 +250,7 @@ Terima kasih! 🙏`;
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Mountain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Package Not Found</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('packageNotFound', currentLanguage)}</h2>
             <p className="text-gray-600">The package you're looking for doesn't exist.</p>
           </div>
         </div>
@@ -232,18 +259,27 @@ Terima kasih! 🙏`;
   }
 
 
-  // Ensure arrays exist and have default values
+  // Ensure arrays exist and parse JSON if needed
   const pkg = {
     ...packageData,
-    gallery: packageData.gallery || [],
-    highlights: packageData.highlights || [],
-    includes: packageData.includes || [],
-    excludes: packageData.excludes || [],
-    itinerary: packageData.itinerary || [],
-    faqs: packageData.faqs || [],
-    destinations: packageData.destinations || [],
+    gallery: safeParse(packageData.gallery, []),
+    highlights: safeParse(packageData.highlights, []),
+    includes: safeParse(packageData.includes, []),
+    excludes: safeParse(packageData.excludes, []),
+    itinerary: safeParse(packageData.itinerary, []),
+    faqs: safeParse(packageData.faqs, []),
+    destinations: safeParse(packageData.destinations, []),
     reviews: [] // Reviews not yet implemented in CMS
   };
+  
+  // Debug log to verify parsing
+  console.log('📊 Package data parsed:', {
+    highlights: pkg.highlights.length,
+    includes: pkg.includes.length,
+    excludes: pkg.excludes.length,
+    itinerary: pkg.itinerary.length,
+    faqs: pkg.faqs.length
+  });
 
   // SEO Data
   const title = seoData?.title || `${pkg.title || pkg.name} | Bromo Ijen Tour`;
@@ -311,7 +347,7 @@ Terima kasih! 🙏`;
           {/* Breadcrumbs */}
           <div className="mb-8">
             <Breadcrumbs items={[
-              { name: 'Tour Packages', url: '/packages' },
+              { name: t('tourPackages', currentLanguage), url: '/packages' },
               { name: pkg.title || pkg.name, url: `/packages/${pkg.slug}` }
             ]} />
           </div>
@@ -334,7 +370,7 @@ Terima kasih! 🙏`;
                       <div className="w-full h-full bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 flex items-center justify-center">
                         <div className="text-center text-white">
                           <Mountain className="w-16 h-16 mb-2 mx-auto" />
-                          <p className="text-sm">No Image Available</p>
+                          <p className="text-sm">{t('noImageAvailable', currentLanguage)}</p>
                         </div>
                       </div>
                     )}
@@ -398,7 +434,7 @@ Terima kasih! 🙏`;
                   <div className="flex items-center space-x-2 mb-1">
                     <h1 className="text-xl font-bold text-gray-900">{pkg.title}</h1>
                     <span className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
-                      Verified
+                      {t('verified', currentLanguage)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
@@ -412,13 +448,13 @@ Terima kasih! 🙏`;
                     <div className="flex items-center space-x-1">
                       <MapPin className="w-3 h-3 text-gray-700" />
                       <span className="text-gray-700">{pkg.location}</span>
-                      <button className="text-red-500 hover:underline text-sm">View Location</button>
+                      <button className="text-red-500 hover:underline text-sm">{t('viewLocation', currentLanguage)}</button>
                     </div>
                     <div className="flex items-center space-x-1">
                       <span className="bg-yellow-400 text-white px-2 py-1 rounded text-xs font-semibold">
                         {pkg.rating}/5.0
                       </span>
-                      <span className="text-gray-600 text-sm">({pkg.reviewCount} Reviews)</span>
+                      <span className="text-gray-600 text-sm">({pkg.reviewCount} {t('reviews', currentLanguage)})</span>
                     </div>
                   </div>
                 </div>
@@ -438,17 +474,17 @@ Terima kasih! 🙏`;
 
             {/* Description */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Description</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{t('description', currentLanguage)}</h2>
               <div 
                 className="text-gray-700 leading-relaxed mb-4 prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(pkg.longDescription || '') }}
               />
-              <button className="text-red-500 hover:underline font-medium">Show More</button>
+              <button className="text-red-500 hover:underline font-medium">{t('showMore', currentLanguage)}</button>
             </div>
 
             {/* Highlights */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Highlights</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{t('highlights', currentLanguage)}</h2>
               <div className="space-y-3">
                 {pkg.highlights.map((highlight: string, index: number) => (
                   <div key={index} className="flex items-center space-x-3">
@@ -463,7 +499,7 @@ Terima kasih! 🙏`;
 
             {/* Itinerary */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-6">Itinerary</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-6">{t('itinerary', currentLanguage)}</h2>
               <div className="space-y-6">
                 {pkg.itinerary.map((day: any, index: number) => (
                   <div key={index} className="flex items-start space-x-4">
@@ -510,7 +546,7 @@ Terima kasih! 🙏`;
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Includes</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">{t('includes', currentLanguage)}</h3>
                   <div className="space-y-3">
                     {pkg.includes.map((item: string, index: number) => (
                       <div key={index} className="flex items-center space-x-3">
@@ -521,7 +557,7 @@ Terima kasih! 🙏`;
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">Excludes</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">{t('excludes', currentLanguage)}</h3>
                   <div className="space-y-3">
                     {pkg.excludes.map((item: string, index: number) => (
                       <div key={index} className="flex items-center space-x-3">
@@ -538,7 +574,7 @@ Terima kasih! 🙏`;
             {/* Location Map */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Location</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('location', currentLanguage)}</h2>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <MapPin className="w-4 h-4" />
                   <span>{pkg.location}</span>
@@ -563,8 +599,8 @@ Terima kasih! 🙏`;
                 <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center border border-gray-200">
                   <div className="text-center text-white">
                     <MapPin className="w-12 h-12 mx-auto mb-2 text-white/80" />
-                    <p className="font-medium text-white">Map Not Available</p>
-                    <p className="text-sm text-gray-300 mt-1">Location: {pkg.location}</p>
+                    <p className="font-medium text-white">{t('mapNotAvailable', currentLanguage)}</p>
+                    <p className="text-sm text-gray-300 mt-1">{t('location', currentLanguage)}: {pkg.location}</p>
                   </div>
                 </div>
               )}
@@ -575,14 +611,14 @@ Terima kasih! 🙏`;
                   rel="noopener noreferrer"
                   className="mt-4 inline-block text-red-500 hover:underline font-medium"
                 >
-                  View in Google Maps →
+                  {t('viewInGoogleMaps', currentLanguage)} →
                 </a>
               )}
             </div>
 
             {/* FAQ */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-6">{t('frequentlyAskedQuestions', currentLanguage)}</h2>
               <div className="space-y-4">
                 {pkg.faqs.map((faq: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-lg">
@@ -681,7 +717,7 @@ Terima kasih! 🙏`;
           <div className="space-y-6">
             {/* Tour Details Summary */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Tour Details</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">{t('tourDetails', currentLanguage)}</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Date:</span>
@@ -714,10 +750,10 @@ Terima kasih! 🙏`;
             <div className="bg-white rounded-xl shadow-sm p-6">
               {/* Starts From */}
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Starts From</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">{t('startsFrom', currentLanguage)}</h3>
                 <div className="flex items-baseline space-x-1">
                   <span className="text-2xl font-bold text-red-500">{pkg.price || 'Contact us'}</span>
-                  <span className="text-sm text-gray-500">/ Person</span>
+                  <span className="text-sm text-gray-500">/ {t('perPerson', currentLanguage)}</span>
                 </div>
               </div>
 
@@ -821,60 +857,27 @@ Terima kasih! 🙏`;
               >
                 <div className="flex items-center justify-center space-x-2">
                   <MessageCircle className="w-5 h-5" />
-                  <span>Book via WhatsApp</span>
+                  <span>{t('bookViaWhatsApp', currentLanguage)}</span>
                 </div>
               </a>
             </div>
 
             {/* Why Book With Us */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-base font-bold text-gray-900 mb-4">Why Book With Us</h3>
+              <h3 className="text-base font-bold text-gray-900 mb-4">{t('whyBookWithUs', currentLanguage)}</h3>
               <div className="space-y-3">
                 {[
-                  'Expertise and Experience',
-                  'Tailored Services',
-                  'Comprehensive Planning',
-                  'Client Satisfaction',
-                  '24/7 Support'
+                  t('expertiseExperience', currentLanguage),
+                  t('tailoredServices', currentLanguage),
+                  t('comprehensivePlanning', currentLanguage),
+                  t('clientSatisfaction', currentLanguage),
+                  t('support24_7', currentLanguage)
                 ].map((item, index) => (
                   <div key={index} className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                     <span className="text-gray-700">{item}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Provider Details */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-base font-bold text-gray-900 mb-4">Provider Details</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{settings?.providerName || 'Bromo Ijen Tour'}</h4>
-                    <p className="text-sm text-gray-600">Member Since: {settings?.memberSince || '14 May 2024'}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm text-gray-900">{settings?.providerPhone || '+62 812-3456-7890'}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Mail className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm text-gray-900">{settings?.providerEmail || 'info@bromotour.com'}</span>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button 
-                    onClick={() => window.open(generateWhatsAppLink(), '_blank')}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300 flex items-center justify-center space-x-2"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>WhatsApp Us</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Languages, 
   Save, 
@@ -17,7 +17,9 @@ import {
   Settings,
   Zap,
   Package,
-  Activity
+  Activity,
+  Download,
+  Terminal
 } from 'lucide-react';
 
 interface TranslationManagerProps {}
@@ -55,43 +57,87 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
     message: string;
     details?: any;
   }>>([]);
+  
+  // Modal state for logs popup
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  
+  // Ref for auto-scroll and mounted tracking
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
 
   const supportedLanguages = {
     id: 'Bahasa Indonesia',
     en: 'English',
     de: 'Deutsch',
-    cn: '中文',
-    ru: 'Русский',
+    nl: 'Nederlands',
+    zh: '中文',
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     autoDetectContent();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  // Add Log Function
+  // Debug: Track showLogsModal state changes
+  useEffect(() => {
+    console.log('🔔 showLogsModal changed to:', showLogsModal);
+  }, [showLogsModal]);
+  
+  // Auto-scroll to bottom when new log is added
+  useEffect(() => {
+    if (isMountedRef.current) {
+      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [translationLogs]);
+
+  // Add Log Function with emoji support
   const addLog = (type: 'info' | 'success' | 'error' | 'warning', message: string, details?: any) => {
+    if (!isMountedRef.current) return; // Don't update if unmounted
+    
+    const emoji = {
+      success: '✅',
+      error: '❌',
+      warning: '⚠️',
+      info: 'ℹ️'
+    }[type];
+    
     const newLog = {
-      id: Date.now().toString(),
+      id: Date.now().toString() + Math.random(),
       timestamp: new Date(),
       type,
-      message,
+      message: `${emoji} ${message}`,
       details
     };
-    setTranslationLogs(prev => [newLog, ...prev.slice(0, 49)]); // Keep last 50 logs
+    setTranslationLogs(prev => [newLog, ...prev.slice(0, 99)]); // Keep last 100 logs
   };
 
   // Auto Detect Content Function
   const autoDetectContent = async () => {
+    if (!isMountedRef.current) return;
+    
     setDetecting(true);
     try {
       // Detect Sections with real translation status
       const sectionsResponse = await fetch('/api/sections');
+      
+      if (!isMountedRef.current) return;
+      
       if (sectionsResponse.ok) {
         const sectionsData = await sectionsResponse.json();
+        
+        if (!isMountedRef.current) return;
+        
         if (sectionsData.success) {
           // Check translation status for each section with rate limiting
           const sectionsWithStatus = [];
           for (let i = 0; i < sectionsData.data.length; i++) {
+            if (!isMountedRef.current) return;
+            
             const section = sectionsData.data[i];
             try {
               // Add small delay between requests to prevent overwhelming the database
@@ -99,12 +145,21 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
                 await new Promise(resolve => setTimeout(resolve, 100));
               }
               
-              // Check if translations exist in database
-              const translationResponse = await fetch(`/api/translations/check-status?sectionId=${section.sectionId}`);
+              if (!isMountedRef.current) return;
+              
+              // Check if translations exist in database (add timestamp to prevent caching)
+              const translationResponse = await fetch(`/api/translations/check-status?sectionId=${section.sectionId}&t=${Date.now()}`);
               let hasTranslation = false;
+              
+              if (!isMountedRef.current) return;
+              
               if (translationResponse.ok) {
                 const statusData = await translationResponse.json();
+                
+                if (!isMountedRef.current) return;
+                
                 hasTranslation = statusData.success && statusData.hasTranslation;
+                console.log(`🔍 Section "${section.sectionId}" translation status: ${hasTranslation ? '✅ HAS translations' : '❌ NO translations'} (count: ${statusData.translationCount || 0})`);
               }
               
               sectionsWithStatus.push({
@@ -123,14 +178,25 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
               });
             }
           }
-          setAvailableSections(sectionsWithStatus);
+          
+          if (isMountedRef.current) {
+            setAvailableSections(sectionsWithStatus);
+          }
         }
       }
 
+      if (!isMountedRef.current) return;
+
       // Detect Packages
       const packagesResponse = await fetch('/api/packages?includeAll=true');
+      
+      if (!isMountedRef.current) return;
+      
       if (packagesResponse.ok) {
         const packagesData = await packagesResponse.json();
+        
+        if (!isMountedRef.current) return;
+        
         if (packagesData.success) {
           const packages = packagesData.data.map((pkg: any) => ({
             id: pkg.id,
@@ -138,14 +204,25 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
             description: pkg.description || '',
             status: pkg.status
           }));
-          setAvailablePackages(packages);
+          
+          if (isMountedRef.current) {
+            setAvailablePackages(packages);
+          }
         }
       }
 
+      if (!isMountedRef.current) return;
+
       // Detect Blogs with real translation status
       const blogsResponse = await fetch('/api/blogs?includeAll=true');
+      
+      if (!isMountedRef.current) return;
+      
       if (blogsResponse.ok) {
         const blogsData = await blogsResponse.json();
+        
+        if (!isMountedRef.current) return;
+        
         if (blogsData.success) {
           // Check translation status for each blog
           const blogsWithStatus = await Promise.all(
@@ -215,15 +292,21 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
     } catch (error) {
       console.error('Error auto-detecting content:', error);
     } finally {
-      setDetecting(false);
+      if (isMountedRef.current) {
+        setDetecting(false);
+      }
     }
   };
 
 
   const showToast = (type: 'success' | 'error', message: string) => {
+    if (!isMountedRef.current) return;
+    
     setToast({ show: true, type, message });
     setTimeout(() => {
-      setToast({ show: false, type, message: '' });
+      if (isMountedRef.current) {
+        setToast({ show: false, type, message: '' });
+      }
     }, 4000);
   };
 
@@ -232,8 +315,12 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
 
 
   // Translate Controller Functions
-  const handleTranslateContent = async (contentId?: string) => {
-    const targetContentId = contentId || translateController.contentId;
+  const handleTranslateContent = async (
+    contentId?: string,
+    contentTypeOverride?: 'section' | 'package' | 'blog' | 'testimonial' | 'gallery'
+  ) => {
+    const targetContentId = contentId ?? translateController.contentId;
+    const targetContentType = contentTypeOverride ?? translateController.contentType ?? 'section';
     
     if (!targetContentId) {
       addLog('error', 'Please enter Content ID');
@@ -241,16 +328,38 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
       return;
     }
 
-    addLog('info', `Starting translation for ${translateController.contentType} ${targetContentId}`);
-    setTranslateController(prev => ({ ...prev, loading: true }));
+    console.log('🔵 TRANSLATE TRIGGERED:', { contentType: targetContentType, targetContentId });
+    console.log('🔵 Current showLogsModal state:', showLogsModal);
+
+    // Open modal and clear previous logs
+    console.log('🟢 Setting showLogsModal to TRUE...');
+    setShowLogsModal(true);
+    // Double-ensure state update is flushed even during concurrent renders
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        setShowLogsModal(true);
+      }
+    }, 0);
+    console.log('🟢 Setting isTranslating to TRUE...');
+    setIsTranslating(true);
+    console.log('🟢 Clearing translation logs...');
+    setTranslationLogs([]); // Clear previous logs
+    
+    console.log('🟢 Modal state should now be TRUE');
+    
+    addLog('info', `Starting translation for ${targetContentType} ${targetContentId}`);
+    setTranslateController(prev => ({
+      ...prev,
+      contentType: targetContentType,
+      contentId: targetContentId,
+      loading: true
+    }));
 
     try {
       addLog('info', 'Sending translation request to API...');
       
-      // Use different endpoints based on content type
-      const endpoint = translateController.contentType === 'blog' 
-        ? '/api/translations/trigger-workaround' 
-        : '/api/translations/trigger-workaround';
+      // Use correct translation trigger endpoint
+      const endpoint = '/api/translations/trigger';
         
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -258,7 +367,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contentType: translateController.contentType,
+          contentType: targetContentType,
           contentId: targetContentId,
           forceRetranslate: true // Always force retranslate to handle content updates
         }),
@@ -267,9 +376,16 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
       addLog('info', `API response received: ${response.status} ${response.statusText}`);
       const data = await response.json();
 
+      // Add API logs to UI if they exist
+      if (data.logs && Array.isArray(data.logs)) {
+        data.logs.forEach((log: any) => {
+          addLog(log.type, log.message, log.details);
+        });
+      }
+
       if (data.success) {
-        addLog('success', `Translation completed successfully for ${translateController.contentType} ${targetContentId}`);
-        showToast('success', `Translation triggered successfully for ${translateController.contentType} ${targetContentId}`);
+        addLog('success', `Translation completed successfully for ${targetContentType} ${targetContentId}`);
+        showToast('success', `Translation triggered successfully for ${targetContentType} ${targetContentId}`);
         
         // Refresh content status after translation
         addLog('info', 'Refreshing translation status...');
@@ -277,6 +393,9 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
         addLog('success', 'Translation status refreshed');
       } else {
         addLog('error', `Translation failed: ${data.error || 'Unknown error'}`);
+        if (data.details) {
+          addLog('error', `Details: ${data.details}`);
+        }
         showToast('error', data.error || 'Failed to trigger translation');
       }
     } catch (error) {
@@ -286,6 +405,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
     } finally {
       addLog('info', 'Translation process finished');
       setTranslateController(prev => ({ ...prev, loading: false }));
+      setIsTranslating(false);
     }
   };
 
@@ -443,7 +563,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
                   <button
                     onClick={() => {
                       setTranslateController(prev => ({ ...prev, contentType: 'section', contentId: section.id }));
-                      handleTranslateContent(section.id);
+                      handleTranslateContent(section.id, 'section');
                     }}
                     disabled={translateController.loading}
                     className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
@@ -465,7 +585,16 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
               <Package className="w-5 h-5 mr-2" />
               Packages ({availablePackages.length})
             </h3>
-            
+            <div className="bg-white rounded-lg p-3 mb-4 border-2 border-green-200">
+              <p className="text-xs font-medium text-green-900 mb-2">📊 Package Detail Page Content:</p>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div className="text-green-800">✅ 15 Dynamic Fields:</div>
+                <div className="text-gray-700 text-xs">Title, Description, Long Desc, Highlights, Includes, Excludes, Itinerary, FAQs, Location, Duration, Departure, Return, Group Size, Difficulty, Best For</div>
+                <div className="text-orange-800 mt-2">⚠️ 35+ Static Texts:</div>
+                <div className="text-gray-700 text-xs">Breadcrumbs, Labels, Buttons, Headings, Error Messages, Form Labels, etc.</div>
+                <div className="text-blue-800 font-semibold mt-2 col-span-2">🎯 Total: 50+ translatable items per package!</div>
+              </div>
+            </div>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {availablePackages.slice(0, 5).map((pkg) => (
@@ -480,40 +609,70 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
                   {/* Package Content Status Dropdown */}
                   <div className="mb-3">
                     <label className="block text-xs font-medium text-gray-900 mb-1">
-                      Check {pkg.title} Translation Status:
+                      📦 {pkg.title} - Translation Fields (15):
                     </label>
                     <select 
                       className="w-full p-2 border border-gray-300 rounded text-xs bg-white text-gray-900"
                     >
-                      <option value="" className="text-gray-900">Check translation status...</option>
-                      <option value={`${pkg.id}.main`} className="text-gray-900">
-                        ✅ {pkg.title} - Main Content (Translated)
-                      </option>
-                      <option value={`${pkg.id}.title`} className="text-gray-900">
-                        ✅ {pkg.title} - Title (Translated)
-                      </option>
-                      <option value={`${pkg.id}.description`} className="text-gray-900">
-                        ✅ {pkg.title} - Description (Translated)
-                      </option>
-                      <option value={`${pkg.id}.highlights`} className="text-gray-900">
-                        ✅ {pkg.title} - Highlights (Translated)
-                      </option>
-                      <option value={`${pkg.id}.itinerary`} className="text-gray-900">
-                        ✅ {pkg.title} - Itinerary (Translated)
-                      </option>
-                      <option value={`${pkg.id}.includes`} className="text-gray-900">
-                        ✅ {pkg.title} - Includes (Translated)
-                      </option>
-                      <option value={`${pkg.id}.excludes`} className="text-gray-900">
-                        ✅ {pkg.title} - Excludes (Translated)
-                      </option>
+                      <option value="" className="text-gray-900">View all translatable fields...</option>
+                      <optgroup label="📝 Main Content (5 fields)">
+                        <option value={`${pkg.id}.title`} className="text-gray-900">
+                          ✅ Title
+                        </option>
+                        <option value={`${pkg.id}.description`} className="text-gray-900">
+                          ✅ Short Description
+                        </option>
+                        <option value={`${pkg.id}.longDescription`} className="text-gray-900">
+                          ✅ Long Description (Rich Text)
+                        </option>
+                        <option value={`${pkg.id}.location`} className="text-gray-900">
+                          ✅ Location
+                        </option>
+                        <option value={`${pkg.id}.duration`} className="text-gray-900">
+                          ✅ Duration
+                        </option>
+                      </optgroup>
+                      <optgroup label="🎯 Details (5 fields)">
+                        <option value={`${pkg.id}.highlights`} className="text-gray-900">
+                          ✅ Highlights (Array)
+                        </option>
+                        <option value={`${pkg.id}.includes`} className="text-gray-900">
+                          ✅ Includes (Array)
+                        </option>
+                        <option value={`${pkg.id}.excludes`} className="text-gray-900">
+                          ✅ Excludes (Array)
+                        </option>
+                        <option value={`${pkg.id}.itinerary`} className="text-gray-900">
+                          ✅ Itinerary (Array of Objects)
+                        </option>
+                        <option value={`${pkg.id}.faqs`} className="text-gray-900">
+                          ✅ FAQs (Array of Q&A)
+                        </option>
+                      </optgroup>
+                      <optgroup label="📊 Meta Info (5 fields)">
+                        <option value={`${pkg.id}.groupSize`} className="text-gray-900">
+                          ✅ Group Size
+                        </option>
+                        <option value={`${pkg.id}.difficulty`} className="text-gray-900">
+                          ✅ Difficulty Level
+                        </option>
+                        <option value={`${pkg.id}.bestFor`} className="text-gray-900">
+                          ✅ Best For (Target Audience)
+                        </option>
+                        <option value={`${pkg.id}.departure`} className="text-gray-900">
+                          ✅ Departure Info
+                        </option>
+                        <option value={`${pkg.id}.return`} className="text-gray-900">
+                          ✅ Return Info
+                        </option>
+                      </optgroup>
                     </select>
                   </div>
                   
                   <button
                     onClick={() => {
                       setTranslateController(prev => ({ ...prev, contentType: 'package', contentId: pkg.id }));
-                      handleTranslateContent(pkg.id);
+                      handleTranslateContent(pkg.id, 'package');
                     }}
                     disabled={translateController.loading}
                     className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
@@ -534,8 +693,93 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
             </div>
           </div>
 
-          {/* Features Translation */}
+          {/* Blogs */}
           <div className="bg-purple-50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
+              <Activity className="w-5 h-5 mr-2" />
+              Blogs ({availableBlogs.length})
+            </h3>
+            <div className="bg-white rounded-lg p-3 mb-4 border-2 border-purple-200">
+              <p className="text-xs font-medium text-purple-900 mb-2">📝 Blog Detail Page Content:</p>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div className="text-purple-800">✅ 6 Dynamic Fields:</div>
+                <div className="text-gray-700 text-xs">Title, Excerpt, Content (Rich Text), Author, Category, Tags (Array)</div>
+                <div className="text-orange-800 mt-2">⚠️ 10+ Static Texts:</div>
+                <div className="text-gray-700 text-xs">Badges, Buttons, Links, Headings, Error Messages</div>
+                <div className="text-blue-800 font-semibold mt-2 col-span-2">🎯 Total: 16+ translatable items per blog!</div>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {availableBlogs.slice(0, 5).map((blog) => (
+                <div key={blog.id} className="bg-white rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 text-sm">{blog.title}</div>
+                      <div className="text-xs text-gray-800">{blog.status}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Blog Content Status Dropdown */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-900 mb-1">
+                      📝 {blog.title} - Translation Fields (6):
+                    </label>
+                    <select 
+                      className="w-full p-2 border border-gray-300 rounded text-xs bg-white text-gray-900"
+                    >
+                      <option value="" className="text-gray-900">View all translatable fields...</option>
+                      <optgroup label="📄 Content (3 fields)">
+                        <option value={`${blog.id}.title`} className="text-gray-900">
+                          ✅ Title
+                        </option>
+                        <option value={`${blog.id}.excerpt`} className="text-gray-900">
+                          ✅ Excerpt (Summary)
+                        </option>
+                        <option value={`${blog.id}.content`} className="text-gray-900">
+                          ✅ Content (Rich Text/HTML)
+                        </option>
+                      </optgroup>
+                      <optgroup label="👤 Meta (3 fields)">
+                        <option value={`${blog.id}.author`} className="text-gray-900">
+                          ✅ Author Name
+                        </option>
+                        <option value={`${blog.id}.category`} className="text-gray-900">
+                          ✅ Category
+                        </option>
+                        <option value={`${blog.id}.tags`} className="text-gray-900">
+                          ✅ Tags (Array)
+                        </option>
+                      </optgroup>
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      setTranslateController(prev => ({ ...prev, contentType: 'blog', contentId: blog.id }));
+                      handleTranslateContent(blog.id, 'blog');
+                    }}
+                    disabled={translateController.loading}
+                    className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {translateController.loading && translateController.contentId === blog.id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin mx-auto" />
+                    ) : (
+                      `Translate ${blog.title}`
+                    )}
+                  </button>
+                </div>
+              ))}
+              {availableBlogs.length > 5 && (
+                <div className="text-center text-sm text-gray-800">
+                  +{availableBlogs.length - 5} more blogs
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Features Translation */}
+          <div className="bg-amber-50 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
               <Settings className="w-5 h-5 mr-2" />
               Features Translation
@@ -636,37 +880,34 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button
               onClick={() => {
-                setTranslateController(prev => ({ ...prev, contentType: 'section', contentId: 'exclusiveDestinations' }));
-                handleTranslateContent('exclusiveDestinations');
+                // Set content type first, then call with explicit ID
+                handleTranslateContent('exclusiveDestinations', 'section');
               }}
-              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm"
+              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm font-medium"
             >
               Translate Exclusive Destinations
             </button>
             <button
               onClick={() => {
-                setTranslateController(prev => ({ ...prev, contentType: 'section', contentId: 'whoAmI' }));
-                handleTranslateContent('whoAmI');
+                handleTranslateContent('whoAmI', 'section');
               }}
-              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm"
+              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm font-medium"
             >
               Translate Who Am I
             </button>
             <button
               onClick={() => {
-                setTranslateController(prev => ({ ...prev, contentType: 'section', contentId: 'whyChooseUs' }));
-                handleTranslateContent('whyChooseUs');
+                handleTranslateContent('whyChooseUs', 'section');
               }}
-              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm"
+              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm font-medium"
             >
               Translate Why Choose Us
             </button>
             <button
               onClick={() => {
-                setTranslateController(prev => ({ ...prev, contentType: 'section', contentId: 'hero' }));
-                handleTranslateContent('hero');
+                handleTranslateContent('hero', 'section');
               }}
-              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm"
+              className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm font-medium"
             >
               Translate Hero Section
             </button>
@@ -675,55 +916,96 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
       </div>
 
       {/* Realtime Translation Logs */}
-      <div className="bg-gray-50 rounded-xl p-6">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Activity className="w-5 h-5 mr-2" />
-            Realtime Translation Logs
+          <h3 className="text-lg font-semibold text-white flex items-center">
+            <Terminal className="w-5 h-5 mr-2 text-green-400" />
+            Translation Logs (Real-time)
           </h3>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600">
-              {translationLogs.length} logs
-            </span>
+          <div className="flex items-center space-x-3">
+            {/* Log Stats */}
+            <div className="flex items-center space-x-2 text-xs">
+              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">
+                ✅ {translationLogs.filter(l => l.type === 'success').length}
+              </span>
+              <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded">
+                ❌ {translationLogs.filter(l => l.type === 'error').length}
+              </span>
+              <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded">
+                ⚠️ {translationLogs.filter(l => l.type === 'warning').length}
+              </span>
+              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
+                ℹ️ {translationLogs.filter(l => l.type === 'info').length}
+              </span>
+            </div>
             <button
               onClick={() => setTranslationLogs([])}
-              className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+              className="px-3 py-1 bg-gray-700 text-gray-300 text-sm rounded hover:bg-gray-600 transition-colors"
             >
               Clear Logs
             </button>
           </div>
         </div>
         
-        <div className="bg-black rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm">
+        <div className="bg-black rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm border border-gray-700" style={{ scrollBehavior: 'smooth' }}>
           {translationLogs.length === 0 ? (
-            <div className="text-gray-500 text-center py-8">
-              No translation logs yet. Start translating to see realtime logs here.
+            <div className="text-gray-500 text-center py-16">
+              <Terminal className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No translation logs yet.</p>
+              <p className="text-xs mt-1">Start translating to see real-time logs here.</p>
             </div>
           ) : (
             <div className="space-y-1">
               {translationLogs.map((log, index) => (
-                <div key={`${log.id}-${index}`} className="flex items-start space-x-2">
-                  <span className="text-gray-400 text-xs w-20 flex-shrink-0">
-                    {log.timestamp.toLocaleTimeString()}
+                <div key={`${log.id}-${index}`} className="flex items-start space-x-3 hover:bg-gray-900/50 px-2 py-1 rounded transition-colors">
+                  <span className="text-gray-500 text-xs w-24 flex-shrink-0 font-normal">
+                    {log.timestamp.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
-                  <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${
-                    log.type === 'success' ? 'bg-green-500' :
-                    log.type === 'error' ? 'bg-red-500' :
-                    log.type === 'warning' ? 'bg-yellow-500' :
-                    'bg-blue-500'
-                  }`}></span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
+                    log.type === 'success' ? 'bg-green-500/20 text-green-400' :
+                    log.type === 'error' ? 'bg-red-500/20 text-red-400' :
+                    log.type === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {log.type.toUpperCase()}
+                  </span>
                   <span className={`flex-1 ${
-                    log.type === 'success' ? 'text-green-400' :
-                    log.type === 'error' ? 'text-red-400' :
-                    log.type === 'warning' ? 'text-yellow-400' :
+                    log.type === 'success' ? 'text-green-300' :
+                    log.type === 'error' ? 'text-red-300' :
+                    log.type === 'warning' ? 'text-yellow-300' :
                     'text-gray-300'
                   }`}>
-                    [{log.type.toUpperCase()}] {log.message}
+                    {log.message}
                   </span>
                 </div>
               ))}
+              <div ref={logsEndRef} />
             </div>
           )}
+        </div>
+        
+        {/* Log Actions */}
+        <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+          <span>
+            Total: {translationLogs.length} log entries
+          </span>
+          <button
+            onClick={() => {
+              const logText = translationLogs.map(l => 
+                `[${l.timestamp.toISOString()}] ${l.type.toUpperCase()}: ${l.message}`
+              ).join('\n');
+              const blob = new Blob([logText], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `translation-logs-${new Date().toISOString()}.txt`;
+              a.click();
+            }}
+            className="flex items-center space-x-1 hover:text-gray-200 transition-colors"
+          >
+            <Download className="w-3 h-3" />
+            <span>Export Logs</span>
+          </button>
         </div>
       </div>
 
@@ -747,6 +1029,142 @@ const TranslationManager: React.FC<TranslationManagerProps> = () => {
             >
               ✕
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Translation Logs Modal Popup */}
+      {(() => {
+        console.log('🔴 Modal conditional check - showLogsModal:', showLogsModal);
+        return showLogsModal;
+      })() && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col border border-gray-700">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center space-x-3">
+                <Terminal className="w-6 h-6 text-green-400" />
+                <h2 className="text-2xl font-bold text-white">Translation Process Monitor</h2>
+                {isTranslating && (
+                  <div className="flex items-center space-x-2 text-yellow-400">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-medium">Translating...</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-3">
+                {/* Log Stats */}
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded font-mono">
+                    ✅ {translationLogs.filter(l => l.type === 'success').length}
+                  </span>
+                  <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded font-mono">
+                    ❌ {translationLogs.filter(l => l.type === 'error').length}
+                  </span>
+                  <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded font-mono">
+                    ⚠️ {translationLogs.filter(l => l.type === 'warning').length}
+                  </span>
+                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-mono">
+                    ℹ️ {translationLogs.filter(l => l.type === 'info').length}
+                  </span>
+                </div>
+                <button
+                  onClick={() => !isTranslating && setShowLogsModal(false)}
+                  disabled={isTranslating}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    isTranslating 
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                  }`}
+                >
+                  {isTranslating ? 'Please wait...' : 'Close'}
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Logs */}
+            <div className="flex-1 overflow-hidden p-6">
+              <div className="bg-black rounded-xl p-6 h-full overflow-y-auto font-mono text-sm border border-gray-700" style={{ scrollBehavior: 'smooth' }}>
+                {translationLogs.length === 0 ? (
+                  <div className="text-gray-500 text-center py-20">
+                    <Terminal className="w-16 h-16 mx-auto mb-4 opacity-50 animate-pulse" />
+                    <p className="text-lg font-medium">Initializing translation process...</p>
+                    <p className="text-sm mt-2">Logs will appear here in real-time</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {translationLogs.map((log, index) => (
+                      <div 
+                        key={`${log.id}-${index}`} 
+                        className="flex items-start space-x-4 hover:bg-gray-900/50 px-3 py-2 rounded-lg transition-all animate-fade-in"
+                      >
+                        <span className="text-gray-500 text-xs w-28 flex-shrink-0 font-normal">
+                          {log.timestamp.toLocaleTimeString('en-US', { 
+                            hour12: false, 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit',
+                            fractionalSecondDigits: 2
+                          })}
+                        </span>
+                        <span className={`px-3 py-1 rounded-lg text-xs font-bold flex-shrink-0 uppercase ${
+                          log.type === 'success' ? 'bg-green-500/30 text-green-300 border border-green-500/50' :
+                          log.type === 'error' ? 'bg-red-500/30 text-red-300 border border-red-500/50' :
+                          log.type === 'warning' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' :
+                          'bg-blue-500/30 text-blue-300 border border-blue-500/50'
+                        }`}>
+                          {log.type}
+                        </span>
+                        <span className={`flex-1 text-base ${
+                          log.type === 'success' ? 'text-green-300 font-medium' :
+                          log.type === 'error' ? 'text-red-300 font-medium' :
+                          log.type === 'warning' ? 'text-yellow-300' :
+                          'text-gray-300'
+                        }`}>
+                          {log.message}
+                        </span>
+                      </div>
+                    ))}
+                    <div ref={logsEndRef} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-700 flex items-center justify-between">
+              <div className="text-sm text-gray-400">
+                <span className="font-mono">Total logs: {translationLogs.length}</span>
+                {isTranslating && (
+                  <span className="ml-4 text-yellow-400 animate-pulse">● Processing translations...</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setTranslationLogs([])}
+                  className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                >
+                  Clear Logs
+                </button>
+                <button
+                  onClick={() => {
+                    const logText = translationLogs.map(l => 
+                      `[${l.timestamp.toISOString()}] ${l.type.toUpperCase()}: ${l.message}`
+                    ).join('\n');
+                    const blob = new Blob([logText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `translation-logs-${new Date().toISOString()}.txt`;
+                    a.click();
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export Logs</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -123,21 +123,30 @@ const TourPackagesSection = ({ overrideContent, publishedOnly = false }: TourPac
   }
 
   return (
-    <section id="packages" className="py-16 bg-white">
+    <section id="packages" className="py-16 sm:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* Clean Header */}
         <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-          <div className="flex items-center justify-between mb-12">
-            <div>
-              <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-3">
-                {sectionContent?.title || t('packages.title')}
-              </h2>
-              <p className="text-gray-600 text-lg max-w-2xl">
-                {sectionContent?.description || 'Explore our carefully curated tour packages designed to give you the best experience.'}
-              </p>
+          <div className="text-center mb-12">
+            {/* Badge */}
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full mb-4">
+              <Compass className="w-4 h-4 text-orange-600" />
+              <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
+                {sectionContent?.subtitle || 'Tour Packages'}
+              </span>
             </div>
-            <Link href={currentLanguage === 'id' ? '/packages' : `/${currentLanguage}/packages`} className="hidden lg:block text-orange-600 hover:text-orange-700 font-semibold">
-              View all tours →
+            
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              {sectionContent?.title || t('packages.title')}
+            </h2>
+            
+            <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed mb-6">
+              {sectionContent?.description || 'Explore our carefully curated tour packages'}
+            </p>
+            
+            <Link href={currentLanguage === 'id' ? '/packages' : `/${currentLanguage}/packages`} className="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold text-sm">
+              View all tours
+              <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
         </AnimatedSection>

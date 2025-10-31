@@ -15,15 +15,56 @@ const publicPaths = [
   '/og-default.jpg',
   '/uploads',
   '/tinymce',
-  '/cms',
   '/admin',
   '/api-docs',
   '/api-testing',
-  '/sections'
+  '/sections',
+  '/maheswaradev', // Admin area
+  '/cms' // CMS area
 ];
 
-export function middleware(request: NextRequest) {
+// Protected routes that require authentication
+const protectedRoutes = ['/cms', '/maheswaradev/admin'];
+
+// Public routes that don't require authentication
+const publicRoutes = ['/maheswaradev/admin/login'];
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // ===== AUTHENTICATION CHECK =====
+  // Check if path requires authentication
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  
+  if (isProtectedRoute && !isPublicRoute) {
+    // Check for session token
+    const sessionToken = request.cookies.get('session_token')?.value;
+    
+    if (!sessionToken) {
+      // No session, redirect to login
+      const loginUrl = new URL('/maheswaradev/admin/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // Verify session token (lightweight check)
+    // Full verification happens in API routes, here we just check if token exists
+    // and is not obviously expired
+    try {
+      // We could add a lightweight token validation here if needed
+      // For now, we trust the cookie presence and let API routes do full validation
+    } catch (error) {
+      // Invalid token, redirect to login
+      const loginUrl = new URL('/maheswaradev/admin/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.delete('session_token');
+      return response;
+    }
+  }
+  
+  // ===== LANGUAGE ROUTING =====
   
   // Skip middleware for public paths
   if (publicPaths.some(path => pathname.startsWith(path))) {
@@ -84,8 +125,7 @@ export const config = {
      * - og-default.jpg (default OG image)
      * - uploads (uploaded files)
      * - tinymce (TinyMCE assets)
-     * - cms (CMS pages)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|og-default.jpg|uploads|tinymce|cms).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|og-default.jpg|uploads|tinymce).*)',
   ],
 };

@@ -8,14 +8,19 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed-navigation": "tsx prisma/seed-navigation.ts"
+    "db:seed-navigation": "tsx prisma/seed-navigation.ts",
+    "backup": "node scripts/backup-app-data.js",
+    "backup:db": "bash scripts/backup-database.sh",
+    "backup:complete": "node scripts/backup-complete.js"
   },
   "dependencies": {
     "@prisma/client": "^6.17.1",
     "@tailwindcss/typography": "^0.5.19",
     "@tinymce/tinymce-react": "^6.3.0",
+    "@types/archiver": "^6.0.4",
     "@types/bcryptjs": "^3.0.0",
     "@types/jsonwebtoken": "^9.0.10",
+    "archiver": "^7.0.1",
     "bcryptjs": "^3.0.2",
     "framer-motion": "^12.23.24",
     "jsonwebtoken": "^9.0.2",

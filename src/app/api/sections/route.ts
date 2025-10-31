@@ -11,35 +11,31 @@ function safeParse<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
-// Helper: map default section object to DB shape (all optionals)
-function sectionToDb(sectionData: any) {
-  return {
-    sectionId: sectionData?.sectionId,
-    title: sectionData?.title,
-    subtitle: sectionData?.subtitle,
-    description: sectionData?.description,
-    ctaText: sectionData?.ctaText,
-    ctaLink: sectionData?.ctaLink,
-    backgroundVideo: sectionData?.backgroundVideo,
-    image: sectionData?.image,
-    logo: sectionData?.logo,
-    phone: sectionData?.phone,
-    email: sectionData?.email,
-    destinations: sectionData?.destinations ? JSON.stringify(sectionData.destinations) : null,
-    features: sectionData?.features ? JSON.stringify(sectionData.features) : null,
-    stats: sectionData?.stats ? JSON.stringify(sectionData.stats) : null,
-    packages: sectionData?.packages ? JSON.stringify(sectionData.packages) : null,
-    testimonials: sectionData?.testimonials ? JSON.stringify(sectionData.testimonials) : null,
-    posts: sectionData?.posts ? JSON.stringify(sectionData.posts) : null,
-    items: sectionData?.items ? JSON.stringify(sectionData.items) : null,
-    categories: sectionData?.categories ? JSON.stringify(sectionData.categories) : null,
-    // Display settings (for Tour Packages & Blog sections)
-    displayCount: sectionData?.displayCount,
-    featuredOnly: sectionData?.featuredOnly,
-    category: sectionData?.category,
-    sortBy: sectionData?.sortBy,
-    layoutStyle: sectionData?.layoutStyle,
-  };
+/**
+ * Strip HTML tags from text - TinyMCE cleanup utility
+ * PRODUCTION FIX: Prevents translation corruption by removing HTML before DB storage
+ */
+function stripHtmlForDatabase(text: string): string {
+  if (!text) return text;
+
+  // Remove all HTML tags but preserve line breaks
+  let cleanText = text
+    .replace(/<[^>]*>/g, '')  // Remove all HTML tags
+    .replace(/&nbsp;/g, ' ')  // Replace non-breaking spaces
+    .replace(/&amp;/g, '&')   // Replace &amp; with &
+    .replace(/&lt;/g, '<')    // Replace &lt; with <
+    .replace(/&gt;/g, '>')    // Replace &gt; with >
+    .replace(/&quot;/g, '"')  // Replace &quot; with "
+    .replace(/&#39;/g, "'")   // Replace &#39; with '
+    .trim();
+
+  // Clean up multiple spaces and line breaks
+  cleanText = cleanText
+    .replace(/\s+/g, ' ')      // Multiple spaces to single space
+    .replace(/\n\s*\n/g, '\n') // Multiple line breaks to single
+    .trim();
+
+  return cleanText;
 }
 
 // Default content for initialization
@@ -625,11 +621,37 @@ async function initializeDefaultContent() {
     for (const sectionKey of sectionKeys) {
       if (existingIds.has(sectionKey)) continue;
 
-      const sectionData = defaultSectionContent[sectionKey];
+      const sectionData = defaultSectionContent[sectionKey] as any; // Cast to any to handle varying section types
 
       await prisma.sectionContent.create({
         data: {
-          ...sectionToDb(sectionData as any),
+          sectionId: sectionData.sectionId || sectionKey,
+          title: stripHtmlForDatabase(sectionData.title || ''),
+          subtitle: stripHtmlForDatabase(sectionData.subtitle || ''),
+          description: stripHtmlForDatabase(sectionData.description || ''),
+          ctaText: stripHtmlForDatabase(sectionData.ctaText || ''),
+          ctaLink: sectionData.ctaLink,
+          backgroundVideo: sectionData.backgroundVideo,
+          image: sectionData.image,
+          destinations: sectionData.destinations ? JSON.stringify(sectionData.destinations) : null,
+          features: sectionData.features ? JSON.stringify(sectionData.features) : null,
+          stats: sectionData.stats ? JSON.stringify(sectionData.stats) : null,
+          packages: sectionData.packages ? JSON.stringify(sectionData.packages) : null,
+          testimonials: sectionData.testimonials ? JSON.stringify(sectionData.testimonials) : null,
+          posts: sectionData.posts ? JSON.stringify(sectionData.posts) : null,
+          items: sectionData.items ? JSON.stringify(sectionData.items) : null,
+          categories: sectionData.categories ? JSON.stringify(sectionData.categories) : null,
+          displayCount: sectionData.displayCount,
+          featuredOnly: sectionData.featuredOnly,
+          category: sectionData.category,
+          sortBy: sectionData.sortBy,
+          layoutStyle: sectionData.layoutStyle,
+          showFilters: sectionData.showFilters,
+          enableLightbox: sectionData.enableLightbox,
+          enableAutoSlide: sectionData.enableAutoSlide,
+          autoSlideInterval: sectionData.autoSlideInterval,
+          transitionEffect: sectionData.transitionEffect,
+          animationSpeed: sectionData.animationSpeed,
         },
       });
     }
@@ -668,45 +690,72 @@ export async function GET(request: NextRequest) {
       });
 
       if (translation) {
-        // Use database translation
+        // Use database translation with proper null handling
         console.log(`✅ Found database translation for section ${sectionData.sectionId} in ${language}`);
+        
+        // Helper: Only use translation if it's not null/undefined, otherwise use original
+        // BUT: Empty strings in translation should be kept as empty (might be intentional)
+        const useTranslation = (translatedValue: string | null | undefined, originalValue: string | null | undefined) => {
+          // If translated value exists (even if empty string), use it
+          if (translatedValue !== null && translatedValue !== undefined) {
+            return translatedValue;
+          }
+          // Otherwise use original
+          return originalValue;
+        };
+        
         return NextResponse.json({
           success: true,
           data: {
             id: sectionData.id,
             sectionId: sectionData.sectionId,
-            title: translation.title || sectionData.title,
-            subtitle: translation.subtitle || sectionData.subtitle,
-            description: translation.description || sectionData.description,
-            ctaText: translation.ctaText || sectionData.ctaText,
+            title: useTranslation(translation.title, sectionData.title),
+            subtitle: useTranslation(translation.subtitle, sectionData.subtitle),
+            description: useTranslation(translation.description, sectionData.description),
+            ctaText: useTranslation(translation.ctaText, sectionData.ctaText),
+            buttonText: useTranslation(translation.buttonText, sectionData.buttonText),
+            phone: useTranslation(translation.phone, sectionData.phone),
+            email: useTranslation(translation.email, sectionData.email),
             logo: sectionData.logo,
-            phone: sectionData.phone,
-            email: sectionData.email,
             ctaLink: sectionData.ctaLink,
             backgroundVideo: sectionData.backgroundVideo,
             image: sectionData.image,
+            // For JSON fields: use translation if exists, otherwise fallback to original
             destinations: translation.destinations ? safeParse(translation.destinations, []) : safeParse(sectionData.destinations, []),
             features: translation.features ? safeParse(translation.features, []) : safeParse(sectionData.features, []),
             stats: translation.stats ? safeParse(translation.stats, []) : safeParse(sectionData.stats, []),
-            // packages: translation.packages ? safeParse(translation.packages, []) : safeParse(sectionData.packages, []),
-            // testimonials: translation.testimonials ? safeParse(translation.testimonials, []) : safeParse(sectionData.testimonials, []),
-            // posts: translation.posts ? safeParse(translation.posts, []) : safeParse(sectionData.posts, []),
-            // items: translation.items ? safeParse(translation.items, []) : safeParse(sectionData.items, []),
-            // categories: translation.categories ? safeParse(translation.categories, []) : safeParse(sectionData.categories, []),
-            // displayCount: translation.displayCount || sectionData.displayCount,
-            // featuredOnly: translation.featuredOnly ?? sectionData.featuredOnly,
-            // category: translation.category || sectionData.category,
-            // sortBy: translation.sortBy || sectionData.sortBy,
-            // layoutStyle: translation.layoutStyle || sectionData.layoutStyle,
+            packages: translation.packages ? safeParse(translation.packages, []) : safeParse(sectionData.packages, []),
+            testimonials: translation.testimonials ? safeParse(translation.testimonials, []) : safeParse(sectionData.testimonials, []),
+            posts: translation.posts ? safeParse(translation.posts, []) : safeParse(sectionData.posts, []),
+            items: translation.items ? safeParse(translation.items, []) : safeParse(sectionData.items, []),
+            categories: translation.categories ? safeParse(translation.categories, []) : safeParse(sectionData.categories, []),
+            displayCount: sectionData.displayCount,
+            featuredOnly: sectionData.featuredOnly,
+            category: sectionData.category,
+            sortBy: sectionData.sortBy,
+            layoutStyle: sectionData.layoutStyle,
+            showFilters: sectionData.showFilters,
+            enableLightbox: sectionData.enableLightbox,
+            enableAutoSlide: sectionData.enableAutoSlide,
+            autoSlideInterval: sectionData.autoSlideInterval,
+            transitionEffect: sectionData.transitionEffect,
+            animationSpeed: sectionData.animationSpeed,
             createdAt: sectionData.createdAt.toISOString(),
             updatedAt: sectionData.updatedAt.toISOString()
           },
           source: 'database-translation',
-          language: language
+          language: language,
+          debug: {
+            hasTitle: !!translation.title,
+            hasSubtitle: !!translation.subtitle,
+            hasDescription: !!translation.description,
+            translationId: translation.id
+          }
         });
       } else {
         // No translation found, return original data (NO AUTO TRANSLATE)
-        // console.log(`⚠️  No translation found for section ${sectionData.sectionId} in ${language}, returning original data`);
+        console.log(`⚠️  No translation found for section ${sectionData.sectionId} in ${language}, returning INDONESIAN (original) data`);
+        console.log(`   👉 User will see Indonesian text. To fix: Go to CMS > Translations and translate this section!`);
         return NextResponse.json({
           success: true,
           data: {
@@ -769,22 +818,32 @@ export async function GET(request: NextRequest) {
             subtitle: translation.subtitle || sectionData.subtitle,
             description: translation.description || sectionData.description,
             ctaText: translation.ctaText || sectionData.ctaText,
-            // ctaLink: translation.ctaLink || sectionData.ctaLink,
-            // backgroundVideo: translation.backgroundVideo || sectionData.backgroundVideo,
-            // image: translation.image || sectionData.image,
+            buttonText: translation.buttonText || sectionData.buttonText,
+            phone: translation.phone || sectionData.phone,
+            email: translation.email || sectionData.email,
+            logo: sectionData.logo,
+            ctaLink: sectionData.ctaLink,
+            backgroundVideo: sectionData.backgroundVideo,
+            image: sectionData.image,
             destinations: translation.destinations ? safeParse(translation.destinations, []) : safeParse(sectionData.destinations, []),
             features: translation.features ? safeParse(translation.features, []) : safeParse(sectionData.features, []),
             stats: translation.stats ? safeParse(translation.stats, []) : safeParse(sectionData.stats, []),
-            // packages: translation.packages ? safeParse(translation.packages, []) : safeParse(sectionData.packages, []),
-            // testimonials: translation.testimonials ? safeParse(translation.testimonials, []) : safeParse(sectionData.testimonials, []),
-            // posts: translation.posts ? safeParse(translation.posts, []) : safeParse(sectionData.posts, []),
-            // items: translation.items ? safeParse(translation.items, []) : safeParse(sectionData.items, []),
-            // categories: translation.categories ? safeParse(translation.categories, []) : safeParse(sectionData.categories, []),
-            // displayCount: translation.displayCount || sectionData.displayCount,
-            // featuredOnly: translation.featuredOnly ?? sectionData.featuredOnly,
-            // category: translation.category || sectionData.category,
-            // sortBy: translation.sortBy || sectionData.sortBy,
-            // layoutStyle: translation.layoutStyle || sectionData.layoutStyle,
+            packages: translation.packages ? safeParse(translation.packages, []) : safeParse(sectionData.packages, []),
+            testimonials: translation.testimonials ? safeParse(translation.testimonials, []) : safeParse(sectionData.testimonials, []),
+            posts: translation.posts ? safeParse(translation.posts, []) : safeParse(sectionData.posts, []),
+            items: translation.items ? safeParse(translation.items, []) : safeParse(sectionData.items, []),
+            categories: translation.categories ? safeParse(translation.categories, []) : safeParse(sectionData.categories, []),
+            displayCount: sectionData.displayCount,
+            featuredOnly: sectionData.featuredOnly,
+            category: sectionData.category,
+            sortBy: sectionData.sortBy,
+            layoutStyle: sectionData.layoutStyle,
+            showFilters: sectionData.showFilters,
+            enableLightbox: sectionData.enableLightbox,
+            enableAutoSlide: sectionData.enableAutoSlide,
+            autoSlideInterval: sectionData.autoSlideInterval,
+            transitionEffect: sectionData.transitionEffect,
+            animationSpeed: sectionData.animationSpeed,
             createdAt: sectionData.createdAt.toISOString(),
             updatedAt: sectionData.updatedAt.toISOString()
           };
@@ -849,10 +908,10 @@ export async function POST(request: NextRequest) {
     const updatedSection = await prisma.sectionContent.upsert({
       where: { sectionId: section },
       update: {
-        title: data.title,
-        subtitle: data.subtitle,
-        description: data.description,
-        ctaText: data.ctaText,
+        title: stripHtmlForDatabase(data.title || ''),
+        subtitle: stripHtmlForDatabase(data.subtitle || ''),
+        description: stripHtmlForDatabase(data.description || ''),
+        ctaText: stripHtmlForDatabase(data.ctaText || ''),
         ctaLink: data.ctaLink,
         backgroundVideo: data.backgroundVideo,
         image: data.image,
@@ -872,10 +931,10 @@ export async function POST(request: NextRequest) {
       },
       create: {
         sectionId: section,
-        title: data.title,
-        subtitle: data.subtitle,
-        description: data.description,
-        ctaText: data.ctaText,
+        title: stripHtmlForDatabase(data.title || ''),
+        subtitle: stripHtmlForDatabase(data.subtitle || ''),
+        description: stripHtmlForDatabase(data.description || ''),
+        ctaText: stripHtmlForDatabase(data.ctaText || ''),
         ctaLink: data.ctaLink,
         backgroundVideo: data.backgroundVideo,
         image: data.image,
@@ -938,10 +997,10 @@ export async function PUT(request: NextRequest) {
     const replacedSection = await prisma.sectionContent.upsert({
       where: { sectionId: section },
       update: {
-        title: data.title,
-        subtitle: data.subtitle,
-        description: data.description,
-        ctaText: data.ctaText,
+        title: stripHtmlForDatabase(data.title || ''),
+        subtitle: stripHtmlForDatabase(data.subtitle || ''),
+        description: stripHtmlForDatabase(data.description || ''),
+        ctaText: stripHtmlForDatabase(data.ctaText || ''),
         ctaLink: data.ctaLink,
         backgroundVideo: data.backgroundVideo,
         image: data.image,
@@ -961,10 +1020,10 @@ export async function PUT(request: NextRequest) {
       },
       create: {
         sectionId: section,
-        title: data.title,
-        subtitle: data.subtitle,
-        description: data.description,
-        ctaText: data.ctaText,
+        title: stripHtmlForDatabase(data.title || ''),
+        subtitle: stripHtmlForDatabase(data.subtitle || ''),
+        description: stripHtmlForDatabase(data.description || ''),
+        ctaText: stripHtmlForDatabase(data.ctaText || ''),
         ctaLink: data.ctaLink,
         backgroundVideo: data.backgroundVideo,
         image: data.image,

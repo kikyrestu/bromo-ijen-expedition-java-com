@@ -12,10 +12,10 @@ import TestimonialSection from '@/components/TestimonialSection';
 import BlogSection from '@/components/BlogSection';
 import GallerySection from '@/components/GallerySection';
 import Footer from '@/components/Footer';
-// Gotur Template Components
-import GoturTourPackagesSection from '@/components/gotur/GoturTourPackagesSection';
 import TranslationDebugPanel from '@/components/TranslationDebugPanel';
+import GoturHomePage from '@/components/gotur/GoturHomePage';
 import { generateWebsiteSchema, generateOrganizationSchema } from '@/lib/seo-utils';
+import BannerSlot from '@/components/banners/BannerSlot';
 
 interface HomePageClientProps {
   lang: string;
@@ -40,12 +40,10 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
         // Fetch site settings
         const settingsRes = await fetch('/api/settings');
         const settingsJson = await settingsRes.json();
-        console.log('🔧 Settings fetched:', settingsJson.data);
         if (settingsJson.success) {
           setSettings(settingsJson.data);
-          const template = settingsJson.data.activeTemplate || 'default';
+          const template = (settingsJson.data.activeTemplate || 'default').toString().trim().toLowerCase();
           setActiveTemplate(template);
-          console.log('🎨 Active template set to:', template);
         }
       } catch (error) {
         console.error('Error fetching SEO data:', error);
@@ -67,10 +65,6 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
 
   const websiteSchema = generateWebsiteSchema(siteName, siteUrl, description);
   const organizationSchema = generateOrganizationSchema(siteName, siteUrl, description);
-
-  // Debug template value
-  console.log('🎯 Current activeTemplate:', activeTemplate);
-
   // Don't render content until we know which template to use
   if (isLoading) {
     return null;
@@ -133,30 +127,32 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
         <DynamicHeader />
         <main className="flex-grow">
           <NotificationBar />
-          
-          {/* Hero Section - Always the same */}
-          <div className="relative pt-20">
-            <HeroSection />
-          </div>
-
-          {/* Template-based Content Rendering */}
           {activeTemplate === 'gotur' ? (
-            <>
-              {/* Gotur Template Sections */}
-              <GoturTourPackagesSection />
-              <WhoAmISection />
-              <DestinasiEksklusifSection />
-              <TestimonialSection />
-              <BlogSection />
-              <GallerySection />
-            </>
+            <GoturHomePage />
           ) : (
             <>
-              {/* Default Template (Current) */}
+              <div className="relative pt-20">
+                <HeroSection />
+              </div>
+
+              <BannerSlot location="landing.hero" variant="hero" />
+
               <WhoAmISection />
+
+              <BannerSlot location="landing.abovePackages" variant="section" />
+
               <DestinasiEksklusifSection />
+
+              <BannerSlot location="landing.belowPackages" variant="section" className="px-6" />
+
               <TourPackagesSection />
+
+              <BannerSlot location="landing.belowTestimonials" variant="compact" className="px-6" />
+
               <TestimonialSection />
+
+              <BannerSlot location="landing.footerPromo" variant="section" className="px-6" />
+
               <BlogSection />
               <GallerySection />
             </>

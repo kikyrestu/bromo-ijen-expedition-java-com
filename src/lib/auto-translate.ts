@@ -2,7 +2,18 @@
  * Auto-Translation Helper with Database Persistence
  * 
  * ⚠️ DISABLED: Auto-translation is now disabled for manual CMS control
- * This module is kept for reference but auto-translation functions are disabled
+ * This module export async function autoTranslatePackage(
+  packageId: string,
+  sourceData: PackageTranslationData,
+  forceRetranslate: boolean = false
+): Promise<void> {
+  console.log(`\n🔄 Manual translation triggered for Package ${packageId}`);
+  
+  const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== SOURCE_LANGUAGE);
+
+  for (const targetLang of targetLanguages) {
+    try {
+      console.log(`\n📝 Translating package to ${targetLang.toUpperCase()} via DeepL...`);reference but auto-translation functions are disabled
  * 
  * Supported Languages: ID, EN, DE, NL, ZH
  */
@@ -35,6 +46,64 @@ interface PackageTranslationData {
   location?: string;
 }
 
+async function translateHeaderNavigation(
+  targetLang: SupportedLanguage
+): Promise<void> {
+  if (targetLang === SOURCE_LANGUAGE) {
+    return;
+  }
+
+  try {
+    const navigationItems = await prisma.navigationItem.findMany({
+      where: {
+        menu: {
+          location: 'header'
+        }
+      },
+      include: {
+        translations: true
+      },
+      orderBy: {
+        order: 'asc'
+      }
+    });
+
+    for (const item of navigationItems) {
+      const sourceTranslation =
+        item.translations.find((translation) => translation.language === SOURCE_LANGUAGE) ||
+        item.translations[0];
+
+      if (!sourceTranslation || !sourceTranslation.title?.trim()) {
+        continue;
+      }
+
+      const translatedTitle = await translateField(sourceTranslation.title, targetLang);
+      const translatedUrl = sourceTranslation.url || '#';
+
+      await prisma.navigationItemTranslation.upsert({
+        where: {
+          itemId_language: {
+            itemId: item.id,
+            language: targetLang
+          }
+        },
+        update: {
+          title: translatedTitle,
+          url: translatedUrl
+        },
+        create: {
+          itemId: item.id,
+          language: targetLang,
+          title: translatedTitle,
+          url: translatedUrl
+        }
+      });
+    }
+  } catch (error) {
+    console.error(`❌ Failed to translate header navigation for ${targetLang}:`, error);
+  }
+}
+
 interface BlogTranslationData {
   title?: string;
   excerpt?: string;
@@ -58,7 +127,53 @@ interface GalleryTranslationData {
 }
 
 /**
+ * Detect if text is in Indonesian (source language)
+ * Returns true if text appears to be Indonesian
+ */
+function isIndonesian(text: string): boolean {
+  if (!text || text.trim() === '') return true;
+  
+  // Common Indonesian words that are unlikely in other languages
+  const indonesianKeywords = [
+    'yang', 'dan', 'dengan', 'untuk', 'dari', 'ini', 'itu', 'di', 'ke', 'pada',
+    'adalah', 'akan', 'dapat', 'kami', 'kita', 'saya', 'mereka', 'anda',
+    'tahun', 'hari', 'bulan', 'minggu', 'waktu', 'tempat', 'orang', 'baik',
+    'besar', 'kecil', 'banyak', 'sedikit', 'lebih', 'kurang', 'sudah', 'belum'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  const foundKeywords = indonesianKeywords.filter(keyword => 
+    lowerText.includes(` ${keyword} `) || 
+    lowerText.startsWith(`${keyword} `) || 
+    lowerText.endsWith(` ${keyword}`)
+  );
+  
+  // If we find 2+ Indonesian keywords, it's likely Indonesian
+  return foundKeywords.length >= 2;
+}
+
+/**
+ * Validate if translation result is in target language (not source)
+ * Returns true if translation appears to be in target language
+ */
+function isValidTranslation(original: string, translated: string, targetLang: SupportedLanguage): boolean {
+  // If translation is same as original, it might be untranslated
+  if (original.toLowerCase().trim() === translated.toLowerCase().trim()) {
+    console.warn(`⚠️  Translation result is identical to source: "${original.substring(0, 50)}..."`);
+    return false;
+  }
+  
+  // Check if translated text still contains Indonesian keywords
+  if (isIndonesian(translated)) {
+    console.warn(`⚠️  Translation result still contains Indonesian: "${translated.substring(0, 50)}..."`);
+    return false;
+  }
+
+  return true;
+}
+/**
  * Translate a single text field to target language
+ * PRODUCTION-READY: No HTML handling needed since source is plain text
  */
 async function translateField(
   text: string,
@@ -69,22 +184,40 @@ async function translateField(
   }
 
   try {
-    // Add timeout protection
+    // Source data is now plain text (HTML stripped at save time)
+    // No need for HTML handling anymore!
+    console.log(`🌍 Translating to ${targetLang.toUpperCase()}: "${text.substring(0, 50)}..."`);
+
     const translated = await Promise.race([
       translationService.translateText(
         text,
-        SOURCE_LANGUAGE,
+        'id',  // FORCE Indonesian as source (not auto-detect)
         targetLang
       ),
-      new Promise<string>((_, reject) => 
+      new Promise<string>((_, reject) =>
         setTimeout(() => reject(new Error('Translation timeout')), 15000)
       )
     ]);
-    console.log(`✅ Translated to ${targetLang}: "${text.substring(0, 50)}..." → "${translated.substring(0, 50)}..."`);
+
+    console.log(`   ✅ DeepL result: "${translated.substring(0, 50)}..."`);
+
+    // Validate translation result
+    if (!isValidTranslation(text, translated, targetLang)) {
+      console.error(`❌ Translation validation FAILED!`);
+      console.error(`   Source: "${text.substring(0, 50)}..."`);
+      console.error(`   Result: "${translated.substring(0, 50)}..."`);
+      console.error(`   ⚠️  WARNING: Translation may still contain Indonesian text!`);
+
+      // Still use the translation (might be better than nothing)
+      // but log warning for monitoring
+    }
+
+    console.log(`✅ Translation complete for ${targetLang}: "${translated.substring(0, 50)}..."`);
     return translated;
+
   } catch (error) {
     console.error(`❌ Translation failed for ${targetLang}:`, error);
-    return text; // Return original on error
+    throw error; // Throw instead of returning original, so caller knows it failed
   }
 }
 
@@ -142,6 +275,51 @@ async function translateAllFields(
   return translated;
 }
 
+function prepareTranslationForStorage(data: Record<string, unknown>): Record<string, string | null> {
+  const prepared: Record<string, string | null> = {};
+
+  console.log(`📦 Preparing translation data for storage...`);
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) {
+      console.log(`   ⏭️  Skipping field "${key}": undefined`);
+      continue;
+    }
+
+    if (value === null) {
+      prepared[key] = null;
+      console.log(`   ⚠️  Field "${key}": NULL`);
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      prepared[key] = value;
+      const preview = value.length > 50 ? value.substring(0, 50) + '...' : value;
+      console.log(`   ✅ Field "${key}": "${preview}" (${value.length} chars)`);
+      continue;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      prepared[key] = String(value);
+      console.log(`   ✅ Field "${key}": ${value} (${typeof value})`);
+      continue;
+    }
+
+    try {
+      prepared[key] = JSON.stringify(value);
+      console.log(`   ✅ Field "${key}": JSON array/object (${prepared[key]?.length} chars)`);
+    } catch (error) {
+      console.warn(`   ❌ Failed to stringify translation field "${key}":`, error);
+    }
+  }
+
+  const savedFields = Object.keys(prepared);
+  console.log(`📦 Total fields prepared: ${savedFields.length}`);
+  console.log(`📦 Fields: ${savedFields.join(', ')}`);
+
+  return prepared;
+}
+
 /**
  * AUTO-TRANSLATE PACKAGES
  * Translates package content and saves to PackageTranslation table
@@ -151,10 +329,8 @@ export async function autoTranslatePackage(
   sourceData: PackageTranslationData,
   forceRetranslate: boolean = false
 ): Promise<void> {
-  // ⚠️ AUTO-TRANSLATE DISABLED: Use manual CMS translation instead
-  console.log(`🚫 Auto-translate disabled for Package ${packageId}. Use CMS for manual translation.`);
-  return;
-
+  console.log(`\n🚀 Starting translation for Package ${packageId}`);
+  
   const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== SOURCE_LANGUAGE);
 
   for (const targetLang of targetLanguages) {
@@ -179,6 +355,7 @@ export async function autoTranslatePackage(
 
       // Translate all fields
       const translatedData = await translateAllFields(sourceData as Record<string, unknown>, targetLang);
+      const preparedData = prepareTranslationForStorage(translatedData);
 
       // Save or update translation
       await prisma.packageTranslation.upsert({
@@ -192,11 +369,11 @@ export async function autoTranslatePackage(
           packageId,
           language: targetLang,
           isAutoTranslated: true,
-          ...translatedData
+          ...preparedData
         },
         update: {
           isAutoTranslated: true,
-          ...translatedData,
+          ...preparedData,
           updatedAt: new Date()
         }
       });
@@ -219,9 +396,8 @@ export async function autoTranslateBlog(
   sourceData: BlogTranslationData,
   forceRetranslate: boolean = false
 ): Promise<void> {
-  // ⚠️ AUTO-TRANSLATE DISABLED: Use manual CMS translation instead
-  console.log(`🚫 Auto-translate disabled for Blog ${blogId}. Use CMS for manual translation.`);
-  return;
+  console.log(`
+� Starting translation for Blog ${blogId}`);
 
   const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== SOURCE_LANGUAGE);
 
@@ -247,6 +423,7 @@ export async function autoTranslateBlog(
 
       // Translate all fields
       const translatedData = await translateAllFields(sourceData as Record<string, unknown>, targetLang);
+      const preparedData = prepareTranslationForStorage(translatedData);
 
       // Save or update translation
       await prisma.blogTranslation.upsert({
@@ -260,11 +437,11 @@ export async function autoTranslateBlog(
           blogId,
           language: targetLang,
           isAutoTranslated: true,
-          ...translatedData
+          ...preparedData
         },
         update: {
           isAutoTranslated: true,
-          ...translatedData,
+          ...preparedData,
           updatedAt: new Date()
         }
       });
@@ -287,9 +464,8 @@ export async function autoTranslateTestimonial(
   sourceData: TestimonialTranslationData,
   forceRetranslate: boolean = false
 ): Promise<void> {
-  // ⚠️ AUTO-TRANSLATE DISABLED: Use manual CMS translation instead
-  console.log(`🚫 Auto-translate disabled for Testimonial ${testimonialId}. Use CMS for manual translation.`);
-  return;
+  console.log(`
+� Starting translation for Testimonial ${testimonialId}`);
 
   const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== SOURCE_LANGUAGE);
 
@@ -315,6 +491,7 @@ export async function autoTranslateTestimonial(
 
       // Translate all fields
       const translatedData = await translateAllFields(sourceData as Record<string, unknown>, targetLang);
+      const preparedData = prepareTranslationForStorage(translatedData);
 
       // Save or update translation
       await prisma.testimonialTranslation.upsert({
@@ -328,11 +505,11 @@ export async function autoTranslateTestimonial(
           testimonialId,
           language: targetLang,
           isAutoTranslated: true,
-          ...translatedData
+          ...preparedData
         },
         update: {
           isAutoTranslated: true,
-          ...translatedData,
+          ...preparedData,
           updatedAt: new Date()
         }
       });
@@ -355,9 +532,8 @@ export async function autoTranslateGallery(
   sourceData: GalleryTranslationData,
   forceRetranslate: boolean = false
 ): Promise<void> {
-  // ⚠️ AUTO-TRANSLATE DISABLED: Use manual CMS translation instead
-  console.log(`🚫 Auto-translate disabled for Gallery ${galleryId}. Use CMS for manual translation.`);
-  return;
+  console.log(`
+� Starting translation for Gallery ${galleryId}`);
 
   const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== SOURCE_LANGUAGE);
 
@@ -383,6 +559,7 @@ export async function autoTranslateGallery(
 
       // Translate all fields
       const translatedData = await translateAllFields(sourceData as Record<string, unknown>, targetLang);
+      const preparedData = prepareTranslationForStorage(translatedData);
 
       // Save or update translation
       await prisma.galleryTranslation.upsert({
@@ -396,11 +573,11 @@ export async function autoTranslateGallery(
           galleryId,
           language: targetLang,
           isAutoTranslated: true,
-          ...translatedData
+          ...preparedData
         },
         update: {
           isAutoTranslated: true,
-          ...translatedData,
+          ...preparedData,
           updatedAt: new Date()
         }
       });
@@ -608,6 +785,8 @@ export interface SectionTranslationData {
   ctaText?: string;
   ctaLink?: string;
   buttonText?: string;
+  phone?: string;
+  email?: string;
   backgroundVideo?: string;
   image?: string;
   destinations?: string;
@@ -630,224 +809,77 @@ export async function autoTranslateSection(
   sourceData: SectionTranslationData,
   forceRetranslate: boolean = false
 ): Promise<void> {
-  // ⚠️ AUTO-TRANSLATE DISABLED: Use manual CMS translation instead
-  console.log(`🚫 Auto-translate disabled for Section ${sectionId}. Use CMS for manual translation.`);
-  return;
+  console.log(`\n🔄 ========================================`);
+  console.log(`🔄 Starting translation for Section: "${sectionId}"`);
+  console.log(`🔄 IMPORTANT: Only translating "${sectionId}" - NOT other sections!`);
+  console.log(`🔄 ========================================`);
+  
+  const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== SOURCE_LANGUAGE);
+  console.log(`🎯 Target languages: ${targetLanguages.join(', ').toUpperCase()}`);
 
-  /* 
-  // DISABLED: Auto-translate functionality removed for manual CMS control
-  // Target languages (exclude Indonesian)
-  const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang !== 'id');
-  console.log(`🌍 Target languages:`, targetLanguages);
-
-  for (const language of targetLanguages) {
-    console.log(`🌍 Processing language: ${language}`);
+  for (const targetLang of targetLanguages) {
     try {
-      // Check if translation already exists with timeout protection
-      const existing = await Promise.race([
-        prisma.sectionContentTranslation.findUnique({
-          where: {
-            sectionId_language: {
-              sectionId,
-              language
-            }
+      console.log(`\n📝 Translating to ${targetLang.toUpperCase()}...`);
+
+      // Check if translation already exists
+      const existingTranslation = await prisma.sectionContentTranslation.findUnique({
+        where: {
+          sectionId_language: {
+            sectionId,
+            language: targetLang
           }
-        }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Database query timeout')), 10000)
-        )
-      ]);
-
-      if (existing && !forceRetranslate) {
-        console.log(`⏭️  Translation for section ${sectionId} in ${language} already exists, skipping...`);
-        continue;
-      }
-
-      console.log(`🔄 Translating section ${sectionId} to ${language}...`);
-
-      const translatedData: Record<string, unknown> = {
-        sectionId,
-        language,
-        isAutoTranslated: true
-      };
-
-      // Translate simple text fields using translateField
-      if (sourceData.title) {
-        translatedData.title = await translateField(sourceData.title, language);
-      }
-
-      if (sourceData.subtitle) {
-        translatedData.subtitle = await translateField(sourceData.subtitle, language);
-      }
-
-      if (sourceData.description) {
-        translatedData.description = await translateField(sourceData.description, language);
-      }
-
-      // DISABLED: Auto-translate functionality removed for manual CMS control
-      // All translation logic commented out since auto-translate is disabled
-      /*
-      if (sourceData.ctaText) {
-        translatedData.ctaText = await translateField(sourceData.ctaText, language);
-      }
-
-      if (sourceData.buttonText) {
-        translatedData.buttonText = await translateField(sourceData.buttonText, language);
-      }
-
-      if (sourceData.ctaLink) {
-        translatedData.ctaLink = sourceData.ctaLink; // Links don't need translation
-      }
-
-      if (sourceData.backgroundVideo) {
-        translatedData.backgroundVideo = sourceData.backgroundVideo; // URLs don't need translation
-      }
-
-      if (sourceData.image) {
-        translatedData.image = sourceData.image; // URLs don't need translation
-      }
-
-      // Translate JSON fields (features, stats, destinations, packages, testimonials, posts, items, categories)
-      if (sourceData.destinations) {
-        try {
-          const destinations = JSON.parse(sourceData.destinations);
-          const translatedDestinations = await translateAllFields(destinations, language);
-          translatedData.destinations = JSON.stringify(translatedDestinations);
-        } catch (e) {
-          console.log(`⚠️  Error parsing destinations for ${sectionId}:`, e);
-          translatedData.destinations = sourceData.destinations;
         }
+      });
+
+      if (existingTranslation && !forceRetranslate) {
+        console.log(`ℹ️  Translation for ${targetLang} exists (created: ${existingTranslation.createdAt.toISOString()})`);
+        console.log(`🔄 Updating with fresh translation from DeepL...`);
+      } else if (existingTranslation) {
+        console.log(`🔁 FORCE RE-TRANSLATE: Overwriting existing ${targetLang} translation`);
+      } else {
+        console.log(`🆕 Creating NEW ${targetLang} translation`);
       }
 
-      if (sourceData.features) {
-        try {
-          const features = JSON.parse(sourceData.features);
-          const translatedFeatures = await translateAllFields(features, language);
-          translatedData.features = JSON.stringify(translatedFeatures);
-        } catch (e) {
-          console.log(`⚠️  Error parsing features for ${sectionId}:`, e);
-          translatedData.features = sourceData.features;
+      // ✅ ALWAYS TRANSLATE (no skip!) - either create or update
+      console.log(`🌍 Calling DeepL API for ${targetLang}...`);
+      const translatedData = await translateAllFields(sourceData as Record<string, unknown>, targetLang);
+      const preparedData = prepareTranslationForStorage(translatedData);
+
+      // Save or update translation - CRITICAL: Only for THIS sectionId!
+      console.log(`💾 Saving translation to database for sectionId="${sectionId}", language="${targetLang}"`);
+      await prisma.sectionContentTranslation.upsert({
+        where: {
+          sectionId_language: {
+            sectionId: sectionId,  // CRITICAL: Must match the input parameter exactly
+            language: targetLang
+          }
+        },
+        create: {
+          sectionId: sectionId,  // CRITICAL: Create only for THIS section
+          language: targetLang,
+          isAutoTranslated: true,
+          ...preparedData
+        },
+        update: {
+          isAutoTranslated: true,
+          ...preparedData,
+          updatedAt: new Date()
         }
-      }
+      });
 
-      if (sourceData.stats) {
-        try {
-          const stats = JSON.parse(sourceData.stats);
-          const translatedStats = await translateAllFields(stats, language);
-          translatedData.stats = JSON.stringify(translatedStats);
-        } catch (e) {
-          console.log(`⚠️  Error parsing stats for ${sectionId}:`, e);
-          translatedData.stats = sourceData.stats;
-        }
-      }
-      */
+      console.log(`✅ Successfully saved ${targetLang} translation for section "${sectionId}" to database`);
 
-      // DISABLED: Auto-translate functionality removed for manual CMS control
-      /*
-      if (sourceData.packages) {
-        try {
-          const packages = JSON.parse(sourceData.packages);
-          const translatedPackages = await translateAllFields(packages, language);
-          translatedData.packages = JSON.stringify(translatedPackages);
-        } catch (e) {
-          console.log(`⚠️  Error parsing packages for ${sectionId}:`, e);
-          translatedData.packages = sourceData.packages;
-        }
+      if (sectionId === 'header') {
+        console.log(`🧭 Translating header navigation items for ${targetLang}...`);
+        await translateHeaderNavigation(targetLang);
+        console.log(`✅ Header navigation items updated for ${targetLang}`);
       }
-
-      if (sourceData.testimonials) {
-        try {
-          const testimonials = JSON.parse(sourceData.testimonials);
-          const translatedTestimonials = await translateAllFields(testimonials, language);
-          translatedData.testimonials = JSON.stringify(translatedTestimonials);
-        } catch (e) {
-          console.log(`⚠️  Error parsing testimonials for ${sectionId}:`, e);
-          translatedData.testimonials = sourceData.testimonials;
-        }
-      }
-
-      if (sourceData.posts) {
-        try {
-          const posts = JSON.parse(sourceData.posts);
-          const translatedPosts = await translateAllFields(posts, language);
-          translatedData.posts = JSON.stringify(translatedPosts);
-        } catch (e) {
-          console.log(`⚠️  Error parsing posts for ${sectionId}:`, e);
-          translatedData.posts = sourceData.posts;
-        }
-      }
-
-      if (sourceData.items) {
-        try {
-          const items = JSON.parse(sourceData.items);
-          const translatedItems = await translateAllFields(items, language);
-          translatedData.items = JSON.stringify(translatedItems);
-        } catch (e) {
-          console.log(`⚠️  Error parsing items for ${sectionId}:`, e);
-          translatedData.items = sourceData.items;
-        }
-      }
-      */
-
-      // DISABLED: Auto-translate functionality removed for manual CMS control
-      /*
-      if (sourceData.categories) {
-        try {
-          const categories = JSON.parse(sourceData.categories);
-          const translatedCategories = await translateAllFields(categories, language);
-          translatedData.categories = JSON.stringify(translatedCategories);
-        } catch (e) {
-          console.log(`⚠️  Error parsing categories for ${sectionId}:`, e);
-          translatedData.categories = sourceData.categories;
-        }
-      }
-
-      // Copy non-translatable fields
-      if (sourceData.displayCount !== undefined) {
-        translatedData.displayCount = sourceData.displayCount;
-      }
-      if (sourceData.featuredOnly !== undefined) {
-        translatedData.featuredOnly = sourceData.featuredOnly;
-      }
-      if (sourceData.category) {
-        translatedData.category = await translateField(sourceData.category, language);
-      }
-      if (sourceData.sortBy) {
-        translatedData.sortBy = sourceData.sortBy; // Technical field, no translation needed
-      }
-      if (sourceData.layoutStyle) {
-        translatedData.layoutStyle = sourceData.layoutStyle; // Technical field, no translation needed
-      }
-      */
-
-      // DISABLED: Auto-translate functionality removed for manual CMS control
-      /*
-      // Upsert translation with timeout protection
-      await Promise.race([
-        prisma.sectionContentTranslation.upsert({
-          where: {
-            sectionId_language: {
-              sectionId,
-              language
-            }
-          },
-          update: translatedData as any,
-          create: translatedData as any
-        }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Database upsert timeout')), 15000)
-        )
-      ]);
-
-      console.log(`✅ Section ${sectionId} translated to ${language}`);
-
     } catch (error) {
-      console.error(`❌ Error translating section ${sectionId} to ${language}:`, error);
+      console.error(`❌ Failed to translate section to ${targetLang}:`, error);
     }
   }
 
-  console.log(`🎉 Section ${sectionId} translation completed!`);
-  */
+  console.log(`\n🎉 Section ${sectionId} translated to all languages!`);
 }
 
 /**
@@ -877,9 +909,16 @@ export async function getSectionTranslation(
       description: translation.description || undefined,
       ctaText: translation.ctaText || undefined,
       buttonText: translation.buttonText || undefined,
+      phone: translation.phone || undefined,
+      email: translation.email || undefined,
       destinations: translation.destinations || undefined,
       features: translation.features || undefined,
-      stats: translation.stats || undefined
+      stats: translation.stats || undefined,
+      packages: translation.packages || undefined,
+      testimonials: translation.testimonials || undefined,
+      posts: translation.posts || undefined,
+      items: translation.items || undefined,
+      categories: translation.categories || undefined
     };
   } catch (error) {
     console.error(`Error fetching section translation for ${sectionId} (${language}):`, error);

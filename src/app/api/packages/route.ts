@@ -7,8 +7,22 @@ import { updatePackageLocalizedUrls } from '@/lib/localized-urls';
 function safeParse(jsonString: string | null, fallback: any = []) {
   if (!jsonString) return fallback;
   try {
-    return JSON.parse(jsonString);
-  } catch {
+    // Normalize JSON string:
+    // 1. Replace Chinese comma (、) with standard comma
+    // 2. Replace Chinese period (。) at end with nothing
+    // 3. Remove trailing period/comma before closing bracket
+    let normalized = jsonString
+      .replace(/、/g, ',')           // Chinese comma → standard comma
+      .replace(/」/g, '"')           // Chinese closing quote → standard quote
+      .replace(/「/g, '"')           // Chinese opening quote → standard quote  
+      .replace(/]。$/g, ']')         // Remove Chinese period at end
+      .replace(/]\s*\.\s*$/g, ']')  // Remove trailing period
+      .replace(/,\s*]/g, ']')        // Remove trailing comma before ]
+      .trim();
+    
+    return JSON.parse(normalized);
+  } catch (error) {
+    console.error(`❌ Failed to parse JSON:`, jsonString?.substring(0, 100), error);
     return fallback;
   }
 }
@@ -100,19 +114,26 @@ export async function GET(request: NextRequest) {
     // Get translations from database if language is not Indonesian
     let translatedPackages = formattedPackages;
     if (language !== 'id') {
+      console.log(`\n🌍 Fetching translations for ${language.toUpperCase()}...`);
       translatedPackages = await Promise.all(
         formattedPackages.map(async (pkg) => {
           // Fetch translation from database
           const translation = await getPackageTranslation(pkg.id, language as any);
           
           if (!translation) {
-            // If no translation found, return original package
-            // console.log(`⚠️  No translation found for package ${pkg.id} in ${language}`);
+            console.log(`⚠️  No translation found for package ${pkg.id} in ${language}`);
             return pkg;
           }
           
+          console.log(`✅ Translation found for ${pkg.id}:`, {
+            title: translation.title ? 'YES' : 'NO',
+            highlights: translation.highlights ? 'YES' : 'NO',
+            includes: translation.includes ? 'YES' : 'NO',
+            excludes: translation.excludes ? 'YES' : 'NO'
+          });
+          
           // Merge original package with translated fields
-          return {
+          const merged = {
             ...pkg,
             title: translation.title || pkg.title,
             description: translation.description || pkg.description,
@@ -130,6 +151,14 @@ export async function GET(request: NextRequest) {
             return: translation.return || pkg.return,
             location: translation.location || pkg.location
           };
+          
+          console.log(`📊 Merged data for ${pkg.id}:`, {
+            highlights: Array.isArray(merged.highlights) ? merged.highlights.length : 'NOT ARRAY',
+            includes: Array.isArray(merged.includes) ? merged.includes.length : 'NOT ARRAY',
+            excludes: Array.isArray(merged.excludes) ? merged.excludes.length : 'NOT ARRAY'
+          });
+          
+          return merged;
         })
       );
     }

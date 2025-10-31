@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Plus, 
   Eye, 
@@ -12,15 +13,26 @@ import {
   BookOpen,
   Camera,
   Users,
+  UserCircle,
   BarChart3,
   Calendar,
   RefreshCw,
   Settings,
+  Bell,
+  Search,
   CheckCircle,
   XCircle,
   FolderOpen,
   Menu,
-  Languages
+  Languages,
+  Layout,
+  Key,
+  LogOut,
+  Lock,
+  X,
+  EyeOff,
+  Eye as EyeIcon,
+  Trash2
 } from 'lucide-react';
 
 import CMSForm from '@/components/CMSForm';
@@ -30,6 +42,14 @@ import SectionManager from '@/components/SectionManager';
 import MediaManager from '@/components/MediaManager';
 import NavigationManager from '@/components/NavigationManager';
 import TranslationManager from '@/components/TranslationManager';
+import TranslationCoverageDisplay from '@/components/TranslationCoverageDisplay';
+import Toast from '@/components/Toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import UsersManager from '@/components/cms/UsersManager';
+import SeoManager from '@/components/cms/SeoManager';
+import TemplatesManager from '@/components/cms/TemplatesManager';
+import ApiKeysManager from '@/components/cms/ApiKeysManager';
+import BannerManager from '@/components/cms/BannerManager';
 import {
   packageFields,
   blogFields,
@@ -125,12 +145,40 @@ const CMSDashboardPage = () => {
   const [loading, setLoading] = useState(false);
   const [showMediaManager, setShowMediaManager] = useState(false); // For form image selection
   const [currentImageField, setCurrentImageField] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [backupList, setBackupList] = useState<any[]>([]);
   
   // Toast notification state
-  const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error'; message: string }>({
+  const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'warning' | 'info'; message: string }>({
     show: false,
     type: 'success',
     message: ''
+  });
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'warning'
   });
 
   // Dashboard stats with real data
@@ -184,23 +232,133 @@ const CMSDashboardPage = () => {
   useEffect(() => {
     fetchAllData();
     fetchSettings();
+    fetchCurrentUser();
   }, []);
+
+  // Fetch backup list when settings tab is opened
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      fetchBackupList();
+    }
+  }, [activeTab]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/auth/session');
+      const data = await res.json();
+      if (data.authenticated) {
+        setCurrentUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
+
+  // Toast helper
+  const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+    setToast({ show: true, type, message });
+  };
+
+  // Confirm helper
+  const showConfirm = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'warning') => {
+    setConfirmDialog({ show: true, title, message, onConfirm, type });
+  };
+
+  // Fetch backup list
+  const fetchBackupList = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/backup/complete');
+      const data = await response.json();
+      
+      if (data.success) {
+        setBackupList(data.data || []);
+      } else {
+        showToast('error', 'Failed to load backup list');
+      }
+    } catch (error) {
+      console.error('Error fetching backups:', error);
+      showToast('error', 'Failed to load backup list');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    showConfirm(
+      'Logout Confirmation',
+      'Are you sure you want to logout?',
+      async () => {
+        try {
+          const res = await fetch('/api/auth/logout', { method: 'POST' });
+          if (res.ok) {
+            window.location.href = '/maheswaradev/admin/login';
+          }
+        } catch (error) {
+          console.error('Error logging out:', error);
+          showToast('error', 'Failed to logout');
+        }
+        setConfirmDialog({ ...confirmDialog, show: false });
+      },
+      'warning'
+    );
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(passwordData)
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showToast('success', 'Password changed successfully!');
+        setShowChangePassword(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      } else {
+        setPasswordError(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('Network error. Please try again');
+    }
+  };
 
   const fetchSettings = async () => {
     try {
       const response = await fetch('/api/settings');
       const data = await response.json();
-      if (data.success) {
-        setFormData({
-          ...formData,
-          whatsappNumber: data.data.whatsappNumber,
-          whatsappGreeting: data.data.whatsappGreeting,
-          providerName: data.data.providerName,
-          memberSince: data.data.memberSince,
-          providerPhone: data.data.providerPhone,
-          providerEmail: data.data.providerEmail,
-          activeTemplate: data.data.activeTemplate || 'default'
-        });
+      if (data.success && data.data) {
+        setFormData((prev: any) => ({
+          ...prev,
+          whatsappNumber: data.data.whatsappNumber ?? prev.whatsappNumber ?? '',
+          whatsappGreeting: data.data.whatsappGreeting ?? prev.whatsappGreeting ?? '',
+          providerName: data.data.providerName ?? prev.providerName ?? '',
+          memberSince: data.data.memberSince ?? prev.memberSince ?? '',
+          providerPhone: data.data.providerPhone ?? prev.providerPhone ?? '',
+          providerEmail: data.data.providerEmail ?? prev.providerEmail ?? '',
+          activeTemplate: data.data.activeTemplate || prev.activeTemplate || 'default',
+          // Branding
+          brandName: data.data.brandName ?? prev.brandName ?? '',
+          siteLogo: data.data.siteLogo ?? prev.siteLogo ?? '',
+          siteTagline: data.data.siteTagline ?? prev.siteTagline ?? '',
+          favicon: data.data.favicon ?? prev.favicon ?? '',
+          // SEO basics displayed in settings
+          siteName: data.data.siteName ?? prev.siteName ?? '',
+          siteDescription: data.data.siteDescription ?? prev.siteDescription ?? '',
+          defaultOgImage: data.data.defaultOgImage ?? prev.defaultOgImage ?? '',
+          siteUrl: data.data.siteUrl ?? prev.siteUrl ?? ''
+        }));
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -300,44 +458,56 @@ const CMSDashboardPage = () => {
       let method = 'POST';
 
       if (activeTab === 'packages') {
-        endpoint = '/api/packages';
+        endpoint = '/api/cms/packages';
         if (isEditing) method = 'PUT';
       } else if (activeTab === 'blogs') {
-        endpoint = '/api/blogs';
+        endpoint = '/api/cms/blogs';
         if (isEditing) method = 'PUT';
       } else if (activeTab === 'testimonials') {
-        endpoint = '/api/testimonials';
+        endpoint = '/api/cms/testimonials';
         if (isEditing) method = 'PUT';
       } else if (activeTab === 'gallery') {
-        endpoint = '/api/gallery';
+        endpoint = '/api/cms/gallery';
         if (isEditing) method = 'PUT';
       }
 
       // Preprocess form data
       const processedData = { ...formData };
 
-      // For packages, convert textarea fields to arrays/objects
+      // For packages, convert textarea fields to arrays/objects then stringify for Prisma
       if (activeTab === 'packages') {
-        // Convert "one per line" fields to arrays
+        // Convert "one per line" fields to arrays, then to JSON strings for database
         ['destinations', 'includes', 'excludes', 'highlights'].forEach(field => {
           if (typeof processedData[field] === 'string') {
-            processedData[field] = processedData[field].split('\n').filter((line: string) => line.trim());
+            const arrayData = processedData[field].split('\n').filter((line: string) => line.trim());
+            processedData[field] = JSON.stringify(arrayData);
+          } else if (Array.isArray(processedData[field])) {
+            // If already array (from edit), stringify it
+            processedData[field] = JSON.stringify(processedData[field]);
           }
         });
 
-        // Convert gallery URLs to array
+        // Convert gallery URLs to array then stringify
         if (typeof processedData.gallery === 'string') {
-          processedData.gallery = processedData.gallery.split('\n').filter((line: string) => line.trim());
+          const galleryArray = processedData.gallery.split('\n').filter((line: string) => line.trim());
+          processedData.gallery = JSON.stringify(galleryArray);
+        } else if (Array.isArray(processedData.gallery)) {
+          processedData.gallery = JSON.stringify(processedData.gallery);
         }
 
-        // Parse JSON fields (itinerary, faqs)
+        // Stringify JSON fields (itinerary, faqs) if they're objects/arrays
         ['itinerary', 'faqs'].forEach(field => {
           if (typeof processedData[field] === 'string' && processedData[field].trim()) {
             try {
-              processedData[field] = JSON.parse(processedData[field]);
+              // Parse to validate, then stringify again
+              const parsed = JSON.parse(processedData[field]);
+              processedData[field] = JSON.stringify(parsed);
             } catch (e) {
               console.warn(`Failed to parse ${field} as JSON, keeping as string`);
             }
+          } else if (typeof processedData[field] === 'object') {
+            // If already object/array, just stringify
+            processedData[field] = JSON.stringify(processedData[field]);
           }
         });
       }
@@ -346,10 +516,16 @@ const CMSDashboardPage = () => {
       if (activeTab === 'blogs' || activeTab === 'gallery') {
         ['highlights', 'tags'].forEach(field => {
           if (typeof processedData[field] === 'string') {
-            processedData[field] = processedData[field].split('\n').filter((line: string) => line.trim());
+            const arrayData = processedData[field].split('\n').filter((line: string) => line.trim());
+            processedData[field] = JSON.stringify(arrayData);
+          } else if (Array.isArray(processedData[field])) {
+            processedData[field] = JSON.stringify(processedData[field]);
           }
         });
       }
+
+      console.log('💾 Saving to endpoint:', endpoint);
+      console.log('📦 Data to save:', processedData);
 
       const response = await fetch(endpoint, {
         method,
@@ -359,7 +535,11 @@ const CMSDashboardPage = () => {
         body: JSON.stringify(processedData),
       });
 
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Save successful:', responseData);
         await fetchAllData();
         setIsEditing(false);
         setEditingItem(null);
@@ -367,7 +547,8 @@ const CMSDashboardPage = () => {
         showToast('success', '✅ Data berhasil disimpan!');
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        showToast('error', `❌ Gagal menyimpan: ${errorData.error || 'Server error'}`);
+        console.error('❌ Save failed:', errorData);
+        showToast('error', `❌ Gagal menyimpan: ${errorData.error || errorData.details || 'Server error'}`);
       }
     } catch (error) {
       console.error('Error saving data:', error);
@@ -375,14 +556,6 @@ const CMSDashboardPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Toast notification helper
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ show: true, type, message });
-    setTimeout(() => {
-      setToast({ show: false, type, message: '' });
-    }, 4000); // Auto dismiss after 4 seconds
   };
 
   // Handle field change for media selection
@@ -427,17 +600,32 @@ const CMSDashboardPage = () => {
   };
 
   const handleDelete = async (id: number | string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+    showConfirm(
+      'Delete Confirmation',
+      'Are you sure you want to delete this item? This action cannot be undone.',
+      async () => {
+        try {
+          await performDelete(id);
+        } catch (error) {
+          console.error('Error in delete handler:', error);
+        }
+        setConfirmDialog({ ...confirmDialog, show: false });
+      },
+      'danger'
+    );
+  };
 
+  const performDelete = async (id: number | string) => {
     try {
       let endpoint = '';
       let method = 'DELETE';
       let body = null;
 
-      if (activeTab === 'packages') endpoint = `/api/packages?id=${id}`;
-      else if (activeTab === 'blogs') endpoint = `/api/blogs?id=${id}`;
-      else if (activeTab === 'testimonials') endpoint = `/api/testimonials?id=${id}`;
-      else if (activeTab === 'gallery') endpoint = `/api/gallery?id=${id}`;
+      if (activeTab === 'packages') endpoint = `/api/cms/packages?id=${id}`;
+      else if (activeTab === 'blogs') endpoint = `/api/cms/blogs?id=${id}`;
+      else if (activeTab === 'testimonials') endpoint = `/api/cms/testimonials?id=${id}`;
+      else if (activeTab === 'gallery') endpoint = `/api/cms/gallery?id=${id}`;
+      else if (activeTab === 'banners') endpoint = `/api/cms/banners?id=${id}`;
 
       const fetchOptions: RequestInit = {
         method,
@@ -477,46 +665,52 @@ const CMSDashboardPage = () => {
       confirmMessage = `Apakah Anda yakin ingin ${newStatus === 'published' ? 'publish' : 'unpublish'} "${itemName}"?`;
     }
 
-    if (!confirm(confirmMessage)) return;
+    showConfirm(
+      'Status Change',
+      confirmMessage,
+      async () => {
+        try {
+          const endpointMap: {[key: string]: string} = {
+            packages: '/api/cms/packages',
+            blogs: '/api/cms/blogs',
+            testimonials: '/api/cms/testimonials'
+          };
+          const endpoint = endpointMap[activeTab];
+          
+          const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: item.id,
+              status: newStatus
+            }),
+          });
 
-    try {
-      const endpointMap: {[key: string]: string} = {
-        packages: '/api/packages',
-        blogs: '/api/blogs',
-        testimonials: '/api/testimonials'
-      };
-      const endpoint = endpointMap[activeTab];
-      
-      const response = await fetch(endpoint, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: item.id,
-          status: newStatus
-        }),
-      });
-
-      if (response.ok) {
-        await fetchAllData();
-        const itemTypeMap: {[key: string]: string} = {
-          packages: 'Package',
-          blogs: 'Blog',
-          testimonials: 'Testimonial'
-        };
-        const itemType = itemTypeMap[activeTab];
-        const statusMsg = activeTab === 'testimonials' 
-          ? (newStatus === 'approved' ? 'di-approve' : 'diubah ke pending')
-          : (newStatus === 'published' ? 'dipublish' : 'diubah ke draft');
-        showToast('success', `✅ ${itemType} berhasil ${statusMsg}!`);
-      } else {
-        showToast('error', '❌ Gagal mengubah status!');
-      }
-    } catch (error) {
-      console.error('Error toggling status:', error);
-      showToast('error', '❌ Gagal mengubah status!');
-    }
+          if (response.ok) {
+            await fetchAllData();
+            const itemTypeMap: {[key: string]: string} = {
+              packages: 'Package',
+              blogs: 'Blog',
+              testimonials: 'Testimonial'
+            };
+            const itemType = itemTypeMap[activeTab];
+            const statusMsg = activeTab === 'testimonials' 
+              ? (newStatus === 'approved' ? 'di-approve' : 'diubah ke pending')
+              : (newStatus === 'published' ? 'dipublish' : 'diubah ke draft');
+            showToast('success', `${itemType} berhasil ${statusMsg}!`);
+          } else {
+            showToast('error', 'Gagal mengubah status!');
+          }
+        } catch (error) {
+          console.error('Error toggling status:', error);
+          showToast('error', 'Gagal mengubah status!');
+        }
+        setConfirmDialog({ ...confirmDialog, show: false });
+      },
+      'info'
+    );
   };
 
   const handleAddNew = () => {
@@ -525,48 +719,104 @@ const CMSDashboardPage = () => {
     setFormData({});
   };
 
+  const handleNavigate = (tabId: string) => {
+    setActiveTab(tabId);
+    setSidebarOpen(false);
+    setIsEditing(false);
+    setEditingItem(null);
+  };
+
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'add-package':
-        setActiveTab('packages');
+        handleNavigate('packages');
         handleAddNew();
         break;
       case 'add-blog':
-        setActiveTab('blogs');
+        handleNavigate('blogs');
         handleAddNew();
         break;
       case 'add-gallery':
-        setActiveTab('gallery');
+        handleNavigate('gallery');
         handleAddNew();
         break;
       case 'manage-sections':
-        setActiveTab('sections');
+        handleNavigate('sections');
         break;
       case 'translate-content':
-        setActiveTab('translations');
+        handleNavigate('translations');
         break;
       case 'seo-settings':
-        setActiveTab('seo');
+        handleNavigate('settings');
         break;
       case 'analytics':
         // Could open analytics modal or navigate to analytics page
-        alert('Analytics feature coming soon!');
+        showToast('info', 'Analytics feature coming soon!');
         break;
     }
   };
 
   const tabs = [
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
+    { id: 'templates', name: 'Templates', icon: Layout },
     { id: 'sections', name: 'Section Content', icon: Settings },
     { id: 'navigation', name: 'Navigation', icon: Menu },
+    { id: 'banners', name: 'Banners', icon: Layout },
     { id: 'translations', name: 'Translations', icon: Languages },
     { id: 'packages', name: 'Packages', icon: Package },
     { id: 'blogs', name: 'Blogs', icon: BookOpen },
     { id: 'testimonials', name: 'Testimonials', icon: MessageSquare },
     { id: 'gallery', name: 'Gallery', icon: Camera },
     { id: 'media', name: 'Media Manager', icon: FolderOpen },
+    { id: 'users', name: 'Users', icon: Users },
+    { id: 'seo', name: 'SEO Management', icon: Search },
+    { id: 'api-keys', name: 'API Keys', icon: Key },
     { id: 'settings', name: 'Settings', icon: Code },
   ];
+
+  const tabCounters: Record<string, number> = {
+    packages: stats.totalPackages,
+    blogs: stats.totalBlogs,
+    testimonials: stats.totalTestimonials,
+    gallery: stats.totalGalleryItems,
+  };
+
+  const renderNavItems = () => (
+    <nav className="space-y-1 px-3">
+      {tabs.map((tab: any) => {
+        const isActive = activeTab === tab.id;
+        const badge = tabCounters[tab.id];
+
+        // All tabs are now internal (no external redirects)
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => handleNavigate(tab.id)}
+            className={`group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold tracking-wide transition ${
+              isActive
+                ? 'bg-orange-500/20 text-white shadow-inner ring-1 ring-orange-400/30'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <span className="flex items-center gap-3">
+              <tab.icon className={`h-4 w-4 ${isActive ? 'text-orange-200' : 'text-white/50 group-hover:text-orange-200'}`} />
+              {tab.name}
+            </span>
+            {badge !== undefined && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  isActive ? 'bg-white/30 text-white' : 'bg-white/10 text-white/70'
+                }`}
+              >
+                {badge}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </nav>
+  );
 
   const getFields = () => {
     switch (activeTab) {
@@ -779,6 +1029,136 @@ const CMSDashboardPage = () => {
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
               placeholder="e.g., info@bromotour.com"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* General Settings - Logo & Site Name */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">🏢 General Settings</h3>
+        <p className="text-gray-600 mb-6">
+          Configure your site logo and basic branding. These settings will be displayed in the header navigation across all pages.
+        </p>
+        
+        <div className="space-y-6">
+          {/* Site Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Site Name / Brand Name
+            </label>
+            <input
+              type="text"
+              value={formData.brandName || formData.siteName || ''}
+              onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              placeholder="e.g., Bromo Ijen Tours"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This will appear in the header next to your logo
+            </p>
+          </div>
+
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Site Logo
+            </label>
+            <div className="flex items-start gap-4">
+              {/* Logo Preview */}
+              {formData.siteLogo && (
+                <div className="flex-shrink-0">
+                  <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <img 
+                      src={formData.siteLogo} 
+                      alt="Site Logo" 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 text-center">Current Logo</p>
+                </div>
+              )}
+              
+              {/* Logo Input */}
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={formData.siteLogo || ''}
+                  onChange={(e) => setFormData({ ...formData, siteLogo: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
+                  placeholder="/uploads/logo.png"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter logo URL or use Media Manager to upload
+                </p>
+                
+                <button
+                  onClick={() => {
+                    setCurrentImageField('siteLogo');
+                    setShowMediaManager(true);
+                  }}
+                  className="mt-3 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <Camera className="w-4 h-4" />
+                  Browse Media Library
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800">
+                <strong>💡 Recommended:</strong> PNG format with transparent background, 200x60px or similar aspect ratio (max height: 60px in header)
+              </p>
+            </div>
+          </div>
+
+          {/* Tagline */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Site Tagline (Optional)
+            </label>
+            <input
+              type="text"
+              value={formData.siteTagline || ''}
+              onChange={(e) => setFormData({ ...formData, siteTagline: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              placeholder="e.g., Your Adventure Starts Here"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Short tagline displayed below logo (optional)
+            </p>
+          </div>
+
+          {/* Favicon */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Favicon (Browser Tab Icon)
+            </label>
+            <div className="flex items-start gap-4">
+              {formData.favicon && (
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <img 
+                      src={formData.favicon} 
+                      alt="Favicon" 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 text-center">Favicon</p>
+                </div>
+              )}
+              
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={formData.favicon || ''}
+                  onChange={(e) => setFormData({ ...formData, favicon: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
+                  placeholder="/favicon.ico"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  32x32px or 16x16px .ico or .png file
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1030,27 +1410,159 @@ const CMSDashboardPage = () => {
 
       {/* Backup & Export */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Backup & Export</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-              <RefreshCw className="w-5 h-5 text-blue-600" />
-            </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">💾 Complete Backup System</h3>
+        <p className="text-gray-600 mb-6">
+          Create a complete backup file (<code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">.mswbak</code>) containing database, content, and all uploaded files. 
+          Perfect for site migration or disaster recovery.
+        </p>
+        
+        {/* Create Backup Button */}
+        <div className="mb-6">
+          <button 
+            onClick={async () => {
+              try {
+                showToast('info', '⏳ Creating complete backup... This may take a few minutes.');
+                
+                const response = await fetch('/api/backup/complete', { 
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                  showToast('success', `✅ Backup created! ${data.filename} (${data.size})`);
+                  // Refresh backup list
+                  fetchBackupList();
+                } else {
+                  showToast('error', `❌ Backup failed: ${data.error}`);
+                }
+              } catch (error) {
+                console.error('Backup error:', error);
+                showToast('error', '❌ Failed to create backup!');
+              }
+            }}
+            className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl border-2 border-blue-500"
+          >
+            <RefreshCw className="w-5 h-5" />
             <div className="text-left">
-              <h4 className="font-semibold text-gray-900">Export Data</h4>
-              <p className="text-sm text-gray-600">Download all content as JSON</p>
+              <h4 className="font-semibold text-lg">Create Complete Backup (.mswbak)</h4>
+              <p className="text-sm text-blue-100">Database + Content + Files (One-click restore)</p>
             </div>
           </button>
+        </div>
+        
+        {/* Backup Files List */}
+        <div className="border-t border-gray-200 pt-6">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <span>📂 Existing Backups</span>
+            <button
+              onClick={fetchBackupList}
+              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+          </h4>
           
-          <button className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-              <RefreshCw className="w-5 h-5 text-green-600" />
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+              Loading backups...
             </div>
-            <div className="text-left">
-              <h4 className="font-semibold text-gray-900">Import Data</h4>
-              <p className="text-sm text-gray-600">Upload content from JSON file</p>
+          ) : backupList.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <FolderOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No backups found</p>
+              <p className="text-sm">Create your first backup above</p>
             </div>
-          </button>
+          ) : (
+            <div className="space-y-3">
+              {backupList.map((backup: any) => (
+                <div
+                  key={backup.name}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FolderOpen className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h5 className="font-mono text-sm font-semibold text-gray-900">{backup.name}</h5>
+                      <p className="text-xs text-gray-600">
+                        {new Date(backup.createdAt).toLocaleString('id-ID', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })} • {backup.size}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={backup.path}
+                      download
+                      className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </a>
+                    
+                    <button
+                      onClick={() => {
+                        showConfirm(
+                          'Delete Backup',
+                          `Are you sure you want to delete ${backup.name}? This action cannot be undone.`,
+                          async () => {
+                            try {
+                              const response = await fetch(`/api/backup/complete?filename=${encodeURIComponent(backup.name)}`, {
+                                method: 'DELETE'
+                              });
+                              
+                              const data = await response.json();
+                              
+                              if (data.success) {
+                                showToast('success', '✅ Backup deleted successfully');
+                                fetchBackupList();
+                              } else {
+                                showToast('error', `❌ Delete failed: ${data.error}`);
+                              }
+                            } catch (error) {
+                              showToast('error', '❌ Failed to delete backup');
+                            }
+                            setConfirmDialog({ ...confirmDialog, show: false });
+                          },
+                          'danger'
+                        );
+                      }}
+                      className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Info Box */}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <Bell className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 text-sm mb-1">💡 What's included in .mswbak backup?</h4>
+              <ul className="text-xs text-blue-800 space-y-1">
+                <li>✅ <strong>database.sql</strong> - Complete MySQL database dump</li>
+                <li>✅ <strong>app-data.json</strong> - All content with translations (packages, blogs, etc)</li>
+                <li>✅ <strong>uploads/</strong> - All images and files from /public/uploads/</li>
+                <li>✅ <strong>manifest.json</strong> - File checksums for integrity verification</li>
+                <li>🔄 <strong>One-click restore</strong> - Upload .mswbak file to restore entire site</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1093,219 +1605,273 @@ const CMSDashboardPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-            <div className="flex space-x-4">
+    <div className="flex min-h-screen bg-[#eef3f8]">
+      <aside className="hidden w-64 flex-col bg-gradient-to-b from-[#0f1e2f] via-[#0b2635] to-[#051320] text-white shadow-lg lg:flex lg:sticky lg:top-0 lg:h-screen">
+        <div className="flex h-20 items-center border-b border-white/10 px-6">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.45em] text-white/60">Navigator</p>
+            <span className="text-lg font-semibold tracking-wide">TournTravel Suite</span>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto py-4">{renderNavItems()}</div>
+        <div className="border-t border-white/10 px-6 py-4 text-[11px] leading-relaxed text-white/40">
+          Crafted for premium tour operators. Inspired by WordPress, refined for Nusantara journeys.
+        </div>
+      </aside>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 flex lg:hidden">
+          <div
+            className="flex-1 bg-black/40"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="relative w-72 bg-gradient-to-b from-[#102134] via-[#0b2534] to-[#051320] text-white shadow-2xl">
+            <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+              <span className="text-base font-semibold tracking-wide">TournTravel Suite</span>
               <button
-                onClick={fetchAllData}
-                disabled={loading}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="rounded-md p-2 text-white/60 hover:text-white"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 inline ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                ✕
               </button>
-              <a
-                href="/"
-                target="_blank"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Eye className="w-4 h-4 mr-2 inline" />
-                Preview Site
-              </a>
+            </div>
+            <div className="flex-1 overflow-y-auto py-4">{renderNavItems()}</div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-black/10 bg-gradient-to-r from-[#0c1f30] via-[#1a2e45] to-[#0c1f30] px-4 text-gray-100 shadow-sm sm:px-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-md border border-white/10 p-2 text-white/70 hover:bg-white/10 lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.5em] text-gray-300">Control Center</p>
+              <h1 className="text-sm font-semibold tracking-wide">TournTravel Admin</h1>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tabs */}
-        <div className="mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 overflow-x-auto">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.name}</span>
-                </button>
-              ))}
-            </nav>
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-gray-100 md:flex">
+              <Search className="h-3.5 w-3.5" />
+              <input
+                type="text"
+                placeholder="Search content..."
+                className="w-36 bg-transparent text-xs text-white placeholder:text-gray-300 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={fetchAllData}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:opacity-60"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <a
+              href="/"
+              target="_blank"
+              className="inline-flex items-center gap-2 rounded-md border border-orange-400/30 bg-orange-500/20 px-3 py-2 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/30"
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </a>
+            <button
+              type="button"
+              className="hidden items-center rounded-full border border-white/10 bg-white/10 p-2 text-white/70 hover:bg-white/20 sm:inline-flex"
+            >
+              <Bell className="h-4 w-4" />
+            </button>
+            {currentUser && (
+              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white sm:flex">
+                <UserCircle className="h-4 w-4" />
+                {currentUser.displayName}
+              </div>
+            )}
+            <button
+              onClick={() => setShowChangePassword(true)}
+              className="hidden items-center gap-2 rounded-md border border-yellow-400/30 bg-yellow-500/20 px-3 py-2 text-xs font-semibold text-yellow-100 transition hover:bg-yellow-500/30 sm:inline-flex"
+              title="Change Password"
+            >
+              <Lock className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="hidden items-center gap-2 rounded-md border border-red-400/30 bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-100 transition hover:bg-red-500/30 sm:inline-flex"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-        </div>
+        </header>
 
-        {/* Content */}
-        {activeTab === 'dashboard' ? (
-          <CMSDashboard
-            stats={stats}
-            recentActivity={recentActivity}
-            onQuickAction={handleQuickAction}
-          />
-        ) : activeTab === 'sections' ? (
-          <SectionManager />
-        ) : activeTab === 'navigation' ? (
-          <NavigationManager />
-        ) : activeTab === 'translations' ? (
-          <TranslationManager />
-        ) : activeTab === 'media' ? (
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <MediaManager
-              isOpen={true}
-              onClose={() => setActiveTab('dashboard')}
-              mode="manage"
-            />
-          </div>
-        ) : activeTab === 'settings' ? (
-          renderSettings()
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-3">
-              {isEditing ? (
-                <div className="bg-white rounded-xl shadow-sm">
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        {isEditing ? 'Edit' : 'Add New'} {tabs.find(t => t.id === activeTab)?.name}
-                      </h2>
-                      <div className="flex space-x-2">
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 lg:px-10">
+          <div className="space-y-8">
+            {activeTab === 'dashboard' ? (
+              <CMSDashboard
+                stats={stats}
+                recentActivity={recentActivity}
+                onQuickAction={handleQuickAction}
+              />
+            ) : activeTab === 'sections' ? (
+              <SectionManager />
+            ) : activeTab === 'navigation' ? (
+              <NavigationManager />
+            ) : activeTab === 'translations' ? (
+              <TranslationCoverageDisplay autoRefresh={true} refreshInterval={60} />
+            ) : activeTab === 'users' ? (
+              <UsersManager />
+            ) : activeTab === 'seo' ? (
+              <SeoManager />
+            ) : activeTab === 'templates' ? (
+              <TemplatesManager />
+            ) : activeTab === 'api-keys' ? (
+              <ApiKeysManager />
+            ) : activeTab === 'banners' ? (
+              <BannerManager />
+            ) : activeTab === 'media' ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <MediaManager
+                  isOpen={true}
+                  onClose={() => handleNavigate('dashboard')}
+                  mode="manage"
+                />
+              </div>
+            ) : activeTab === 'settings' ? (
+              renderSettings()
+            ) : (
+              <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,_3fr)_minmax(0,_1fr)]">
+                <div className="space-y-6">
+                  {isEditing ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                        <h2 className="text-base font-semibold text-slate-900">
+                          {isEditing ? 'Edit' : 'Add New'} {tabs.find((t) => t.id === activeTab)?.name}
+                        </h2>
                         <button
                           onClick={() => {
                             setIsEditing(false);
                             setEditingItem(null);
                             setFormData({});
                           }}
-                          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                          className="text-sm font-medium text-slate-500 hover:text-slate-700"
                         >
                           Cancel
                         </button>
                       </div>
+                      <div className="px-6 py-6">
+                        <CMSForm
+                          formData={formData}
+                          setFormData={setFormData}
+                          fields={getFields()}
+                          onSubmit={handleSave}
+                          loading={loading}
+                          showSeoForm={(activeTab === 'packages' || activeTab === 'blogs') && formData.slug}
+                          seoPageType={activeTab === 'packages' ? 'package' : activeTab === 'blogs' ? 'blog' : ''}
+                          seoPageSlug={formData.slug || ''}
+                          imageContext={
+                            activeTab === 'packages'
+                              ? 'bromo-ijen-tour-package'
+                              : activeTab === 'blogs'
+                              ? 'bromo-ijen-blog'
+                              : activeTab === 'gallery'
+                              ? 'bromo-ijen-gallery'
+                              : activeTab === 'testimonials'
+                              ? 'bromo-ijen-testimonial'
+                              : 'bromo-ijen'
+                          }
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <CMSForm
-                      formData={formData}
-                      setFormData={setFormData}
-                      fields={getFields()}
-                      onSubmit={handleSave}
-                      loading={loading}
-                      showSeoForm={(activeTab === 'packages' || activeTab === 'blogs') && formData.slug}
-                      seoPageType={activeTab === 'packages' ? 'package' : activeTab === 'blogs' ? 'blog' : ''}
-                      seoPageSlug={formData.slug || ''}
-                      imageContext={
-                        activeTab === 'packages' ? 'bromo-ijen-tour-package' :
-                        activeTab === 'blogs' ? 'bromo-ijen-blog' :
-                        activeTab === 'gallery' ? 'bromo-ijen-gallery' :
-                        activeTab === 'testimonials' ? 'bromo-ijen-testimonial' :
-                        'bromo-ijen'
+                  ) : (
+                    <CMSList
+                      data={getData()}
+                      columns={getColumns()}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onToggleStatus={
+                        activeTab === 'packages' || activeTab === 'blogs' || activeTab === 'testimonials'
+                          ? handleToggleStatus
+                          : undefined
                       }
+                      searchFields={getSearchFields()}
+                      filterOptions={getFilterOptions()}
+                      title={`${tabs.find((t) => t.id === activeTab)?.name} List`}
+                      loading={loading}
+                      onRefresh={fetchAllData}
+                      badgeColors={badgeColors}
                     />
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <CMSList
-                  data={getData()}
-                  columns={getColumns()}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onToggleStatus={(activeTab === 'packages' || activeTab === 'blogs' || activeTab === 'testimonials') ? handleToggleStatus : undefined}
-                  searchFields={getSearchFields()}
-                  filterOptions={getFilterOptions()}
-                  title={`${tabs.find(t => t.id === activeTab)?.name} List`}
-                  loading={loading}
-                  onRefresh={fetchAllData}
-                  badgeColors={badgeColors}
-                />
-              )}
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="space-y-6">
-                {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={handleAddNew}
-                      className="w-full flex items-center space-x-2 p-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Add New</span>
-                    </button>
-                    <button
-                      onClick={fetchAllData}
-                      className="w-full flex items-center space-x-2 p-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Refresh Data</span>
-                    </button>
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-slate-900">Quick Actions</h3>
+                    <div className="mt-4 space-y-2">
+                      <button
+                        onClick={handleAddNew}
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add New
+                      </button>
+                      <button
+                        onClick={fetchAllData}
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh Data
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Stats Summary */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Packages</span>
-                      <span className="font-semibold">{stats.totalPackages}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Blogs</span>
-                      <span className="font-semibold">{stats.totalBlogs}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Media Files</span>
-                      <span className="font-semibold">{stats.totalMediaFiles}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Translation Coverage</span>
-                      <span className="font-semibold">{stats.translationCoverage}%</span>
-                    </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-slate-900">Quick Stats</h3>
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">Total Packages</dt>
+                        <dd className="font-semibold text-slate-900">{stats.totalPackages}</dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">Total Blogs</dt>
+                        <dd className="font-semibold text-slate-900">{stats.totalBlogs}</dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">Media Files</dt>
+                        <dd className="font-semibold text-slate-900">{stats.totalMediaFiles}</dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">Translation Coverage</dt>
+                        <dd className="font-semibold text-slate-900">{stats.translationCoverage}%</dd>
+                      </div>
+                    </dl>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </main>
       </div>
 
-      {/* Toast Notification */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg ${
-            toast.type === 'success' 
-              ? 'bg-green-500 text-white' 
-              : 'bg-red-500 text-white'
-          }`}>
-            {toast.type === 'success' ? (
-              <CheckCircle className="w-6 h-6 flex-shrink-0" />
-            ) : (
-              <XCircle className="w-6 h-6 flex-shrink-0" />
-            )}
-            <div className="font-medium">{toast.message}</div>
-            <button
-              onClick={() => setToast({ ...toast, show: false })}
-              className="ml-4 hover:opacity-80"
-            >
-              ✕
+          <div
+            className={`flex items-center gap-3 rounded-lg px-6 py-4 shadow-2xl ${
+              toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+            <span className="font-medium">{toast.message}</span>
+            <button onClick={() => setToast({ ...toast, show: false })} className="text-lg leading-none">
+              ×
             </button>
           </div>
         </div>
       )}
 
-      {/* Media Manager Modal - for forms */}
       <MediaManager
         isOpen={showMediaManager}
         onClose={() => setShowMediaManager(false)}
@@ -1315,6 +1881,166 @@ const CMSDashboardPage = () => {
           setCurrentImageField('');
         }}
         mode="select"
+      />
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100">
+                  <Lock className="w-5 h-5 text-yellow-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Change Password</h2>
+                  <p className="text-sm text-gray-600">Update your account password</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowChangePassword(false);
+                  setPasswordError('');
+                  setPasswordData({
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                  });
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleChangePassword} className="p-6 space-y-4">
+              {passwordError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">{passwordError}</p>
+                </div>
+              )}
+
+              {/* Current Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-yellow-500 focus:border-transparent placeholder:text-gray-500"
+                    required
+                    placeholder="Enter current password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-yellow-500 focus:border-transparent placeholder:text-gray-500"
+                    required
+                    minLength={6}
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-yellow-500 focus:border-transparent placeholder:text-gray-500"
+                    required
+                    placeholder="Confirm new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setPasswordError('');
+                    setPasswordData({
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors"
+                >
+                  Change Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ ...toast, show: false })}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        show={confirmDialog.show}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ ...confirmDialog, show: false })}
       />
     </div>
   );

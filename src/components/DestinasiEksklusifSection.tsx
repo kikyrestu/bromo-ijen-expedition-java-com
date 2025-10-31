@@ -81,23 +81,31 @@ const DestinasiEksklusifSection = ({ overrideContent }: DestinasiEksklusifSectio
   }, [overrideContent, fetched]);
 
   return (
-    <section id="destinasi" className="py-20 bg-white">
+    <section id="destinasi" className="py-16 sm:py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* Clean Header */}
         <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-          <div className="text-center mb-16">
-            <p className="text-lg text-orange-600 mb-4">{content.subtitle || 'Next Adventure Destination'}</p>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          <div className="text-center mb-12">
+            {/* Badge */}
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full mb-4">
+              <MapPin className="w-4 h-4 text-orange-600" />
+              <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
+                {content.subtitle || 'Destinations'}
+              </span>
+            </div>
+            
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               {content.title || 'Exclusive Destinations'}
             </h2>
+            
             {content.description ? (
               <div
-                className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed [&_p]:m-0"
+                className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed [&_p]:m-0"
                 dangerouslySetInnerHTML={{ __html: (content.description || '') }}
               />
             ) : (
-              <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-                Explore our carefully curated destinations that showcase the best of East Java
+              <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                Explore our carefully curated destinations
               </p>
             )}
           </div>
@@ -143,8 +151,8 @@ const DestinasiEksklusifSection = ({ overrideContent }: DestinasiEksklusifSectio
                     </div>
                   </div>
                 ) : (
-                  // Image Cards
-                  <div className={`relative bg-gray-100 rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${(index === 0 || index === 1) ? 'h-64 md:h-[360px]' : 'h-56 md:h-[260px]' }`}>
+                  // Clean Image Cards
+                  <div className={`relative bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 ${(index === 0 || index === 1) ? 'h-64 md:h-[360px]' : 'h-56 md:h-[260px]' }`}>
                     {/* Image */}
                     {dest.image ? (
                       <img src={dest.image} alt={dest.name} className="absolute inset-0 w-full h-full object-cover" />

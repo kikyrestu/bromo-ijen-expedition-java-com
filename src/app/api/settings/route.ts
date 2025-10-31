@@ -31,6 +31,12 @@ export async function GET(request: NextRequest) {
         memberSince: settings.memberSince,
         providerPhone: settings.providerPhone,
         providerEmail: settings.providerEmail,
+        // General Branding
+        brandName: settings.brandName,
+        siteLogo: settings.siteLogo,
+        siteTagline: settings.siteTagline,
+        favicon: settings.favicon,
+        // SEO Settings
         siteName: settings.siteName,
         siteDescription: settings.siteDescription,
         defaultOgImage: settings.defaultOgImage,
@@ -65,6 +71,11 @@ export async function POST(request: NextRequest) {
         memberSince: body.memberSince || '14 May 2024',
         providerPhone: body.providerPhone || '+62 812-3456-7890',
         providerEmail: body.providerEmail || 'info@bromotour.com',
+        // General Branding
+        brandName: body.brandName,
+        siteLogo: body.siteLogo,
+        siteTagline: body.siteTagline,
+        favicon: body.favicon,
         // SEO Settings
         siteName: body.siteName,
         siteDescription: body.siteDescription,
@@ -85,6 +96,11 @@ export async function POST(request: NextRequest) {
         memberSince: body.memberSince || '14 May 2024',
         providerPhone: body.providerPhone || '+62 812-3456-7890',
         providerEmail: body.providerEmail || 'info@bromotour.com',
+        // General Branding
+        brandName: body.brandName,
+        siteLogo: body.siteLogo,
+        siteTagline: body.siteTagline,
+        favicon: body.favicon,
         // SEO Settings
         siteName: body.siteName || 'Bromo Ijen Tour & Travel',
         siteDescription: body.siteDescription || 'Experience the best of Mount Bromo and Ijen',
@@ -107,6 +123,12 @@ export async function POST(request: NextRequest) {
         memberSince: settings.memberSince,
         providerPhone: settings.providerPhone,
         providerEmail: settings.providerEmail,
+        // General Branding
+        brandName: settings.brandName,
+        siteLogo: settings.siteLogo,
+        siteTagline: settings.siteTagline,
+        favicon: settings.favicon,
+        // SEO Settings
         siteName: settings.siteName,
         siteDescription: settings.siteDescription,
         defaultOgImage: settings.defaultOgImage,

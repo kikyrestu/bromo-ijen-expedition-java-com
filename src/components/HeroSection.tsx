@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { X } from 'lucide-react';
-import { ChevronLeft, ChevronRight, Sun } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Sun } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AnimatedSection from './AnimatedSection';
 
@@ -89,12 +89,6 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
     const prev = (currentDestination - 1 + computedDestinations.length) % computedDestinations.length;
     setSelected(prev);
   };
-
-  useEffect(() => {
-    if (disableAuto) return;
-    const interval = setInterval(nextDestination, 5000);
-    return () => clearInterval(interval);
-  }, [disableAuto, computedDestinations.length]);
 
   // Auto-hide title after 5 seconds
   useEffect(() => {
@@ -190,6 +184,56 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
     }
   }, [effectiveBgSrc, isVideoBg]);
 
+  // Auto-slide based on video duration or fallback to interval
+  useEffect(() => {
+    if (disableAuto) return;
+    
+    const video = videoRef.current;
+    let interval: NodeJS.Timeout | null = null;
+    
+    // If video background, use video duration as interval
+    if (video && isVideoBg) {
+      const setupVideoInterval = () => {
+        const videoDuration = video.duration;
+        
+        // If video duration is valid, use it (in milliseconds)
+        if (videoDuration && !isNaN(videoDuration) && videoDuration > 0) {
+          console.log(`Video duration: ${videoDuration}s, setting interval to ${videoDuration * 1000}ms`);
+          interval = setInterval(nextDestination, videoDuration * 1000);
+        } else {
+          // Fallback if duration not available yet
+          console.log('Video duration not available, using 10s fallback');
+          interval = setInterval(nextDestination, 10000);
+        }
+      };
+      
+      // Check if video metadata already loaded
+      if (video.readyState >= 1) {
+        setupVideoInterval();
+      } else {
+        // Wait for metadata to load
+        const handleLoadedMetadata = () => {
+          setupVideoInterval();
+        };
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        
+        // Cleanup listener
+        return () => {
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+          if (interval) clearInterval(interval);
+        };
+      }
+    } else {
+      // For images, use 10 second interval
+      interval = setInterval(nextDestination, 10000);
+    }
+    
+    // Cleanup interval
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [disableAuto, computedDestinations.length, isVideoBg, currentDestination]);
+
   // Clamp current index when list changes
   useEffect(() => {
     if (computedDestinations.length === 0) {
@@ -202,10 +246,10 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
   }, [computedDestinations.length, currentDestination]);
 
   return (
-    <section 
-      id="home" 
-      className="relative h-screen overflow-hidden"
-      style={{ marginTop: '-80px', paddingTop: '80px' }}
+    <div
+      className="relative overflow-hidden"
+      data-hero-section
+      style={{ marginTop: '-80px', paddingTop: '160px', minHeight: '100vh' }}
       key={`hero-${currentLanguage}`}
     >
       {/* Background Video/Image Canvas */}
@@ -220,7 +264,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
         <video
             key={effectiveBgSrc}
             ref={videoRef}
-            className={`w-full h-full object-cover transition-all duration-300`}
+            className={`w-full h-full object-cover transition-all duration-1000 ease-in-out animate-fade-in`}
           autoPlay
           muted
           loop
@@ -230,9 +274,10 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
           </video>
         ) : effectiveBgSrc ? (
           <img
+            key={effectiveBgSrc}
             src={effectiveBgSrc}
             alt="Hero Background"
-            className={`w-full h-full object-cover transition-all duration-300`}
+            className={`w-full h-full object-cover transition-all duration-1000 ease-in-out animate-fade-in`}
           />
         ) : (
           <div className="w-full h-full bg-gray-900 flex items-center justify-center">
@@ -246,8 +291,8 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
           </div>
         )}
         
-        {/* Subtle Overlay */}
-        <div className="absolute inset-0 bg-black/20"></div>
+        {/* Simple Professional Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/70"></div>
       </div>
 
       {/* Interactive Hotspots */}
@@ -305,14 +350,22 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
                   window.addEventListener('pointerup', up, { once: true });
                 }}
               >
-                {/* Glassmorphism card (name + expanding description in one card) */}
-                <div className="group relative select-none">
-                  <div className="rounded-lg bg-white/15 backdrop-blur-md text-white shadow-md transition-all duration-200 group-hover:shadow-lg group-hover:scale-[1.02] inline-block w-auto max-w-[220px] group-hover:w-[320px]">
-                    <div className="px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[220px]">
+                {/* Text Only + Background on Hover */}
+                <div className="group relative select-none cursor-pointer">
+                  {/* Title - Visible by default, HIDDEN on hover */}
+                  <div className="px-3 py-2 text-sm sm:text-base font-semibold text-white drop-shadow-lg group-hover:opacity-0 transition-opacity duration-200">
                       {dest.name || 'Destination'}
                     </div>
-                    <div className="px-3 pb-2 text-[11px] sm:text-xs leading-relaxed max-h-0 w-0 overflow-hidden opacity-0 translate-y-1 transition-all duration-300 group-hover:w-full group-hover:max-h-40 group-hover:opacity-100 group-hover:translate-y-0 whitespace-normal break-words">
+                  
+                  {/* Card with Name + Description (Only on Hover) */}
+                  <div className="absolute top-0 left-0 pointer-events-none group-hover:pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
+                    <div className="w-[320px] bg-black/70 backdrop-blur-xl shadow-2xl border border-white/20 rounded-xl p-4">
+                      <h3 className="text-sm sm:text-base font-semibold text-white mb-2">
+                        {dest.name || 'Destination'}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
                       {dest.description || 'No description'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -349,14 +402,22 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
                   onMouseEnter={() => handleSpotHover(currentDest.id)}
                   onMouseLeave={handleSpotLeave}
                 >
-                {/* Glassmorphism card (name + expanding description in one card) */}
-                <div className="group relative select-none">
-                  <div className="rounded-lg bg-white/15 backdrop-blur-md text-white shadow-md transition-all duration-200 group-hover:shadow-lg group-hover:scale-[1.02] inline-block w-auto max-w-[220px] group-hover:w-[320px]">
-                    <div className="px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[220px]">
+                {/* Text Only + Background on Hover */}
+                <div className="group relative select-none cursor-pointer">
+                  {/* Title - Visible by default, HIDDEN on hover */}
+                  <div className="px-3 py-2 text-sm sm:text-base font-semibold text-white drop-shadow-lg group-hover:opacity-0 transition-opacity duration-200">
                       {currentDest.name || 'Destination'}
                       </div>
-                    <div className="px-3 pb-2 text-[11px] sm:text-xs leading-relaxed max-h-0 w-0 overflow-hidden opacity-0 translate-y-1 transition-all duration-300 group-hover:w-full group-hover:max-h-40 group-hover:opacity-100 group-hover:translate-y-0 whitespace-normal break-words">
+                  
+                  {/* Card with Name + Description (Only on Hover) */}
+                  <div className="absolute top-0 left-0 pointer-events-none group-hover:pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
+                    <div className="w-[320px] bg-black/70 backdrop-blur-xl shadow-2xl border border-white/20 rounded-xl p-4">
+                      <h3 className="text-sm sm:text-base font-semibold text-white mb-2">
+                        {currentDest.name || 'Destination'}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
                       {currentDest.description || 'No description'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -369,59 +430,65 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
         )}
       </div>
 
-      {/* Destination Navigation Bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20">
-        {/* Indicator Line */}
-        <div className="flex justify-center mb-4">
-          <div className="w-8 h-px bg-white/60"></div>
-          <div className="w-2 h-2 bg-white rounded-full mx-2"></div>
-          <div className="w-8 h-px bg-white/60"></div>
-        </div>
-
-        {/* Destination Carousel */}
-        <div className="bg-black/30 backdrop-blur-sm py-3 sm:py-4 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            {/* Previous Button */}
+      {/* Destination Navigation */}
+      {computedDestinations.length > 0 && (
+        <div className="absolute bottom-6 left-0 right-0 z-20 px-4">
+          <div className="max-w-6xl mx-auto flex items-center gap-4">
             <button
+              type="button"
               onClick={prevDestination}
-              className="p-1 sm:p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300"
+              disabled={computedDestinations.length <= 1}
+              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
 
-            {/* Destinations List */}
-            <div className="flex-1 flex justify-center items-center space-x-2 sm:space-x-4 lg:space-x-8 mx-2 sm:mx-4 lg:mx-8">
-              {computedDestinations.map((dest, index) => {
-                const key = dest?.id ?? `dest-${index}`;
-                const name = dest?.name || `Item ${index + 1}`;
-                const short = name.split(' ')[0];
-                return (
-                <button
-                    key={key}
-                  onClick={() => setSelected(index)}
-                  className={`transition-all duration-300 ${
-                    index === currentDestination
-                      ? 'text-white text-sm sm:text-base lg:text-lg font-semibold border-b-2 border-white pb-1'
-                      : 'text-white/70 text-xs sm:text-sm hover:text-white'
-                  }`}
-                >
-                    <span className="hidden sm:inline">{name}</span>
-                    <span className="sm:hidden">{short}</span>
-                </button>
-                );
-              })}
+            <div className="relative flex-1 px-4 py-6">
+              <div className="absolute left-6 right-6 top-6 h-px bg-white/25" />
+              <div className="flex items-start justify-between gap-4">
+                {computedDestinations.map((dest, index) => {
+                  const key = dest?.id ?? `dest-${index}`;
+                  const name = dest?.name || `Destination ${index + 1}`;
+                  const isActive = index === currentDestination;
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelected(index)}
+                      className={`relative flex-1 min-w-[80px] px-2 pt-8 pb-2 text-center transition-all duration-300 ${
+                        isActive ? 'text-white' : 'text-white/60 hover:text-white/85'
+                      }`}
+                    >
+                      {isActive && (
+                        <span className="absolute left-1/2 -top-4 -translate-x-1/2 text-white drop-shadow-lg">
+                          <ChevronDown className="w-4 h-4" />
+                        </span>
+                      )}
+                      <span
+                        className={`block text-xs sm:text-sm md:text-base tracking-wide uppercase transition-all duration-300 ${
+                          isActive ? 'font-semibold drop-shadow-lg' : 'font-medium'
+                        }`}
+                      >
+                        {name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Next Button */}
             <button
+              type="button"
               onClick={nextDestination}
-              className="p-1 sm:p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300"
+              disabled={computedDestinations.length <= 1}
+              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Subtle Center Content - Auto-hide after 5 seconds with fade animation */}
       <div className={`absolute inset-0 z-10 flex items-center justify-center px-4 transition-opacity duration-1000 ${
@@ -448,7 +515,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
           </div>
         </AnimatedSection>
       </div>
-    </section>
+    </div>
   );
 };
 

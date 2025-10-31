@@ -48,26 +48,68 @@ const GRID_PRESETS = [
   { span: 'col-span-2', class: '' },
 ];
 
-const GallerySection = () => {
+interface GallerySectionProps {
+  overrideContent?: {
+    title?: string;
+    subtitle?: string;
+    description?: string;
+    ctaText?: string;
+    ctaLink?: string;
+    layoutStyle?: string;
+    displayCount?: number;
+    category?: string;
+    sortBy?: string;
+    showFilters?: boolean;
+    enableLightbox?: boolean;
+    // Animation settings
+    enableAutoSlide?: boolean;
+    autoSlideInterval?: number;
+    transitionEffect?: string;
+    animationSpeed?: string;
+  };
+}
+
+const GallerySection = ({ overrideContent }: GallerySectionProps = {}) => {
   const { t, currentLanguage } = useLanguage();
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [sectionContent, setSectionContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Auto-slide functionality for Carousel
+  useEffect(() => {
+    if (
+      sectionContent?.layoutStyle === 'carousel' && 
+      sectionContent?.enableAutoSlide && 
+      galleryItems.length > 0
+    ) {
+      const interval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % galleryItems.length);
+      }, (sectionContent?.autoSlideInterval || 5) * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [sectionContent, galleryItems.length]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch section content
-        const sectionResponse = await fetch(`/api/sections?language=${currentLanguage}`);
-        const sectionData = await sectionResponse.json();
-        
-        if (sectionData.success) {
-          const gallerySection = sectionData.data.find((section: any) => section.sectionId === 'gallery');
-          if (gallerySection) {
-            setSectionContent(gallerySection);
+        // Fetch section content (skip if overrideContent provided)
+        if (!overrideContent) {
+          const sectionResponse = await fetch(`/api/sections?language=${currentLanguage}`);
+          const sectionData = await sectionResponse.json();
+          
+          if (sectionData.success) {
+            const gallerySection = sectionData.data.find((section: any) => section.sectionId === 'gallery');
+            if (gallerySection) {
+              setSectionContent(gallerySection);
+            }
           }
+        } else {
+          // Use override content directly
+          setSectionContent(overrideContent);
         }
 
         // Fetch gallery items
@@ -88,7 +130,7 @@ const GallerySection = () => {
     };
 
     fetchData();
-  }, [currentLanguage]);
+  }, [currentLanguage, overrideContent]);
 
   const openLightbox = (index: number) => {
     setSelectedImageIndex(index);
@@ -154,26 +196,30 @@ const GallerySection = () => {
 
   return (
     <>
-      <section id="gallery" className="py-20 bg-gray-50">
+      <section id="gallery" className="py-16 sm:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
+          {/* Clean Header */}
           <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-            <div className="text-center mb-16">
-              <div className="mb-4">
-                <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+            <div className="text-center mb-12">
+              {/* Badge */}
+              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full mb-4">
+                <Camera className="w-4 h-4 text-orange-600" />
+                <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
                   {sectionContent?.subtitle || t('gallery.subtitle')}
                 </span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
                 {sectionContent?.title || t('gallery.title')}
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                {stripHtmlTags(sectionContent?.description) || 'Explore our stunning collection of photos showcasing the breathtaking landscapes, cultural experiences, and unforgettable moments from Bromo Ijen adventures.'}
+              
+              <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                {stripHtmlTags(sectionContent?.description) || 'Explore our stunning photo collection'}
               </p>
             </div>
           </AnimatedSection>
 
-          {/* Masonry Gallery Grid */}
+          {/* Gallery Grid - Multiple Layouts */}
           <AnimatedSection animation="scaleIn" delay={0.4} duration={1.0}>
             {galleryItems.length === 0 ? (
               <div className="flex items-center justify-center h-96">
@@ -182,7 +228,237 @@ const GallerySection = () => {
                   <p>No gallery items available. Please add content from the CMS.</p>
                 </div>
               </div>
+            ) : sectionContent?.layoutStyle === 'carousel' ? (
+              // ============ CAROUSEL LAYOUT ============
+              <div className="relative overflow-hidden">
+                <div 
+                  className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory scrollbar-hide"
+                  style={{
+                    scrollBehavior: sectionContent?.transitionEffect === 'instant' ? 'auto' : 'smooth',
+                    msOverflowStyle: 'none',
+                    scrollbarWidth: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                  }}
+                  ref={(el) => {
+                    if (el && sectionContent?.enableAutoSlide) {
+                      const scrollWidth = el.scrollWidth / galleryItems.length;
+                      el.scrollTo({
+                        left: scrollWidth * currentSlide,
+                        behavior: sectionContent?.transitionEffect === 'instant' ? 'auto' : 'smooth'
+                      });
+                    }
+                  }}
+                >
+                  {galleryItems.map((item, index) => {
+                    // Get animation speed class
+                    const speedClass = 
+                      sectionContent?.animationSpeed === 'fast' ? 'duration-300' :
+                      sectionContent?.animationSpeed === 'slow' ? 'duration-700' :
+                      'duration-500';
+
+                    return (
+                    <div
+                      key={item.id}
+                      className="flex-none w-[85vw] sm:w-[450px] snap-center"
+                    >
+                      <div
+                        className={`group cursor-pointer overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all ${speedClass} h-[500px]`}
+                        onClick={() => {
+                          if (sectionContent?.enableLightbox !== false) {
+                            openLightbox(index);
+                          }
+                        }}
+                      >
+                        <div className="relative w-full h-full">
+                          {/* Image */}
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.title}
+                              className={`w-full h-full object-cover group-hover:scale-110 transition-transform ${speedClass}`}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center">
+                              <div className="text-center text-white">
+                                <Camera className="w-16 h-16 mx-auto mb-4" />
+                                <p className="text-xl font-bold">{item.title}</p>
+                                <p className="text-sm mt-2">{item.category}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Gradient Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+
+                          {/* Content */}
+                          <div className="absolute inset-0 flex flex-col justify-between p-6">
+                            {/* Top Badge */}
+                            <div className="flex items-center justify-between">
+                              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-gray-900">
+                                {item.category}
+                              </span>
+                              <button className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-200 hover:scale-110">
+                                <Share2 className="w-5 h-5 text-white" />
+                              </button>
+                            </div>
+
+                            {/* Bottom Info */}
+                            <div className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                              <h3 className="text-white font-bold text-2xl mb-3 leading-tight drop-shadow-lg">
+                                {item.title}
+                              </h3>
+                              
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full">
+                                  <Heart className="w-4 h-4 text-white" />
+                                  <span className="text-sm text-white font-semibold">{item.likes}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full">
+                                  <Eye className="w-4 h-4 text-white" />
+                                  <span className="text-sm text-white font-semibold">{item.views}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : sectionContent?.layoutStyle === 'bento' ? (
+              // ============ BENTO LAYOUT (Modern Asymmetric) ============
+              <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-4 auto-rows-[200px]">
+                {galleryItems.map((item, index) => {
+                  // Bento pattern - varying sizes
+                  const bentoPatterns = [
+                    'col-span-4 row-span-2', // Large
+                    'col-span-4 md:col-span-4 row-span-1', // Medium
+                    'col-span-2 md:col-span-4 row-span-1', // Medium
+                    'col-span-2 md:col-span-4 row-span-2', // Tall
+                    'col-span-4 md:col-span-4 row-span-1', // Wide
+                    'col-span-2 row-span-1', // Small
+                    'col-span-2 row-span-1', // Small
+                    'col-span-4 md:col-span-8 row-span-1', // Extra Wide
+                  ];
+                  const pattern = bentoPatterns[index % bentoPatterns.length];
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`${pattern} group cursor-pointer overflow-hidden rounded-3xl hover:scale-[0.98] transition-all duration-500 shadow-lg hover:shadow-2xl`}
+                      onClick={() => {
+                        if (sectionContent?.enableLightbox !== false) {
+                          openLightbox(index);
+                        }
+                      }}
+                    >
+                      <div className="relative w-full h-full">
+                        {/* Image */}
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center">
+                            <div className="text-center text-white">
+                              <Camera className="w-12 h-12 mx-auto mb-2" />
+                              <p className="text-lg font-bold">{item.title}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Modern Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                        {/* Content - Bottom Aligned */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
+                          <div className="flex items-end justify-between">
+                            <div>
+                              <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-md rounded-lg text-xs font-semibold text-white mb-2">
+                                {item.category}
+                              </span>
+                              <h3 className="text-white font-bold text-lg leading-tight">
+                                {item.title}
+                              </h3>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
+                                <Heart className="w-3 h-3 text-white" />
+                                <span className="text-xs text-white font-semibold">{item.likes}</span>
+                              </div>
+                              <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
+                                <Eye className="w-3 h-3 text-white" />
+                                <span className="text-xs text-white font-semibold">{item.views}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : sectionContent?.layoutStyle === 'grid' ? (
+              // ============ GRID LAYOUT (Clean Uniform) ============
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {galleryItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="aspect-square group cursor-pointer overflow-hidden rounded-xl hover:shadow-2xl transition-all duration-300"
+                    onClick={() => {
+                      if (sectionContent?.enableLightbox !== false) {
+                        openLightbox(index);
+                      }
+                    }}
+                  >
+                    <div className="relative w-full h-full">
+                      {/* Image */}
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                          <div className="text-center text-white">
+                            <Camera className="w-10 h-10 mx-auto mb-2" />
+                            <p className="text-sm font-medium">{item.title}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Simple Overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-300 flex items-end p-4">
+                        <div className="w-full transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                          <div className="flex items-center justify-between">
+                            <span className="text-white font-bold text-sm">{item.title}</span>
+                            <span className="px-2 py-1 bg-orange-500 rounded text-xs text-white font-semibold">
+                              {item.category}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-3 h-3 text-white" />
+                              <span className="text-xs text-white">{item.likes}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-3 h-3 text-white" />
+                              <span className="text-xs text-white">{item.views}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
+              // ============ MASONRY LAYOUT (Default - Pinterest Style) ============
               <div className="grid grid-cols-6 grid-rows-9 gap-2 auto-rows-auto">
                 {galleryItems.map((item, index) => {
                   const preset = getGridPreset(index);
@@ -190,7 +466,11 @@ const GallerySection = () => {
                     <div
                       key={item.id}
                       className={`${preset.span} group cursor-pointer overflow-hidden rounded-lg hover:scale-[1.02] transition-transform duration-300`}
-                      onClick={() => openLightbox(index)}
+                      onClick={() => {
+                        if (sectionContent?.enableLightbox !== false) {
+                          openLightbox(index);
+                        }
+                      }}
                     >
                       <div className="relative w-full h-full">
                         {/* Image */}

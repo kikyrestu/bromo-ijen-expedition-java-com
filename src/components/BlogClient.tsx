@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AnimatedSection from './AnimatedSection';
+import BannerSlot from '@/components/banners/BannerSlot';
 import { 
   Search, 
   Calendar, 
@@ -43,11 +44,11 @@ export default function BlogClient({ lang }: BlogClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const categories = [
-    { id: 'all', name: 'All Posts', count: 0 },
-    { id: 'travel', name: 'Travel Tips', count: 0 },
-    { id: 'guides', name: 'Travel Guides', count: 0 },
-    { id: 'adventure', name: 'Adventure', count: 0 },
-    { id: 'stories', name: 'Travel Stories', count: 0 }
+    { id: 'all', name: t('blog.categories.all', 'All Posts'), count: 0 },
+    { id: 'travel', name: t('blog.categories.travelTips', 'Travel Tips'), count: 0 },
+    { id: 'guides', name: t('blog.categories.travelGuides', 'Travel Guides'), count: 0 },
+    { id: 'adventure', name: t('blog.categories.adventure', 'Adventure'), count: 0 },
+    { id: 'stories', name: t('blog.categories.stories', 'Travel Stories'), count: 0 }
   ];
 
   useEffect(() => {
@@ -121,85 +122,88 @@ export default function BlogClient({ lang }: BlogClientProps) {
   }
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white">
+    <div className="bg-slate-950 text-white">
       {/* Hero Section */}
       <AnimatedSection animation="fadeInUp" delay={0.1} duration={0.8}>
-        <div className="bg-orange-600 text-white py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <BookOpen className="w-16 h-16 mx-auto mb-6 text-white/90" />
-              <h1 className="text-5xl md:text-6xl font-bold mb-6">
-                {t('blog.title') || 'Blog & Stories'}
-              </h1>
-              <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto">
-                {t('blog.description') || 'Travel tips, guides, and adventure stories from our journeys'}
-              </p>
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-600 via-orange-700 to-amber-500 opacity-90" />
+          <div className="absolute -top-24 -right-32 h-80 w-80 rounded-full bg-white/20 blur-3xl" />
+          <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-32 pb-28 text-center">
+            <div className="inline-flex items-center space-x-2 bg-white/10 border border-white/20 backdrop-blur-md px-4 py-2 rounded-full mb-6">
+              <BookOpen className="w-5 h-5" />
+              <span className="text-sm font-medium tracking-widest uppercase">{t('blog.subtitle') || 'Travel Journal'}</span>
             </div>
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-tight">
+              {t('blog.title') || 'Blog & Stories'}
+            </h1>
+            <p className="mt-6 text-lg md:text-xl max-w-3xl mx-auto text-white/85">
+              {t('blog.description') || 'Travel tips, guides, and adventure stories from our journeys'}
+            </p>
           </div>
-        </div>
+        </section>
       </AnimatedSection>
+
+      <BannerSlot location="blog.hero" variant="hero" className="px-6" />
 
       {/* Search and Filter Section */}
       <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            {/* Search Bar */}
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder={t('blog.searchPlaceholder') || 'Search articles...'}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                />
+        <section className="-mt-16 pb-12">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8">
+            <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] p-8">
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder={t('blog.searchPlaceholder') || 'Cari artikel...'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-white/10 bg-white/10 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-orange-400/70"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Category Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                      selectedCategory === category.id
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+              {/* Category Filter */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                        selectedCategory === category.id
+                          ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                          : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-sm text-white/70">
+                  {t('blog.resultsCount', `${filteredPosts.length} artikel ketemu`).replace('{count}', filteredPosts.length.toString())}
+                </div>
               </div>
-            </div>
-
-            {/* Results Count */}
-            <div className="mt-4 text-sm text-gray-600">
-              Found {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''}
             </div>
           </div>
-        </div>
+        </section>
       </AnimatedSection>
 
       {/* Featured Post */}
       {filteredPosts.length > 0 && (
         <AnimatedSection animation="fadeInUp" delay={0.3} duration={0.8}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-            <div className="bg-orange-600 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="grid md:grid-cols-2 gap-0">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8 mb-16">
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 shadow-[0_25px_80px_-25px_rgba(251,191,36,0.6)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_60%)]" />
+              <div className="relative grid md:grid-cols-2 gap-0">
                 {/* Image */}
-                <div className="relative h-96 md:h-auto bg-orange-700">
+                <div className="relative h-80 md:h-full overflow-hidden">
                   {filteredPosts[0].image ? (
                     <img
                       src={filteredPosts[0].image}
                       alt={filteredPosts[0].title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover scale-105 hover:scale-110 transition-transform duration-700"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -209,21 +213,26 @@ export default function BlogClient({ lang }: BlogClientProps) {
                 </div>
 
                 {/* Content */}
-                <div className="p-8 md:p-12 flex flex-col justify-center text-white">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <TrendingUp className="w-5 h-5" />
-                    <span className="text-sm font-semibold">Featured Article</span>
+                <div className="p-10 md:p-14 flex flex-col justify-center text-white">
+                  <div className="flex items-center space-x-3 mb-5 text-white/80">
+                    <span className="inline-flex items-center space-x-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>{t('blog.featuredBadge', 'Featured')}</span>
+                    </span>
+                    <span className="text-sm bg-white/10 px-3 py-1 rounded-full border border-white/20">
+                      {filteredPosts[0].category || t('blog.categoryDefault', 'Uncategorized')}
+                    </span>
                   </div>
-                  
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
+
+                  <h2 className="text-3xl md:text-4xl font-semibold mb-4 leading-snug">
                     {filteredPosts[0].title}
                   </h2>
                   
-                  <p className="text-lg text-white/90 mb-6 line-clamp-3">
+                  <p className="text-base md:text-lg text-white/80 mb-6 line-clamp-3">
                     {filteredPosts[0].excerpt}
                   </p>
 
-                  <div className="flex items-center space-x-6 text-sm text-white/80 mb-6">
+                  <div className="flex flex-wrap items-center gap-5 text-sm text-white/70 mb-8">
                     <div className="flex items-center space-x-2">
                       <User className="w-4 h-4" />
                       <span>{filteredPosts[0].author}</span>
@@ -239,10 +248,10 @@ export default function BlogClient({ lang }: BlogClientProps) {
                   </div>
 
                   <Link href={getLocalizedUrl(filteredPosts[0].slug)}>
-                    <button className="inline-flex items-center space-x-2 bg-white text-orange-600 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300">
-                      <span>Read More</span>
+                    <span className="inline-flex items-center gap-2 rounded-full bg-white text-orange-600 px-6 py-3 font-semibold shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5">
+                      <span>{t('blog.heroCta', 'Read More')}</span>
                       <ArrowRight className="w-5 h-5" />
-                    </button>
+                    </span>
                   </Link>
                 </div>
               </div>
@@ -253,28 +262,28 @@ export default function BlogClient({ lang }: BlogClientProps) {
 
       {/* Posts Grid */}
       <AnimatedSection animation="fadeInUp" delay={0.4} duration={0.8}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 pb-24">
           {filteredPosts.length === 0 ? (
             <div className="text-center py-20">
               <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles found</h3>
-              <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('blog.emptyTitle', 'No articles found')}</h3>
+              <p className="text-gray-600">{t('blog.emptyDescription', 'Try adjusting your search or filter criteria')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredPosts.slice(1).map((post, index) => (
                 <div
                   key={post.id}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 group"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-[0_20px_60px_-30px_RGBA(15,23,42,0.8)] transition-all duration-300 hover:-translate-y-1"
                 >
                   {/* Image */}
                   <Link href={getLocalizedUrl(post.slug)}>
-                      <div className="relative h-48 overflow-hidden bg-orange-500">
+                    <div className="relative h-48 overflow-hidden">
                       {post.image ? (
                         <img
                           src={post.image}
                           alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -283,48 +292,47 @@ export default function BlogClient({ lang }: BlogClientProps) {
                       )}
 
                       {post.featured && (
-                        <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                          Featured
+                        <div className="absolute top-4 left-4 rounded-full bg-orange-500/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                          {t('blog.highlightBadge', 'Highlight')}
                         </div>
                       )}
                     </div>
                   </Link>
 
-                  {/* Content */}
-                  <div className="p-6">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <span className="text-sm font-semibold text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
-                        {post.category || 'Uncategorized'}
+                  <div className="flex flex-1 flex-col p-6">
+                    <div className="mb-4 flex items-center">
+                      <span className="inline-flex items-center rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-orange-300">
+                        {post.category || t('blog.categoryDefault', 'Uncategorized')}
                       </span>
                     </div>
 
                     <Link href={getLocalizedUrl(post.slug)}>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                      <h3 className="text-lg font-semibold text-white mb-3 line-clamp-2 transition-colors group-hover:text-orange-300">
                         {post.title}
                       </h3>
                     </Link>
                     
-                    <p className="text-gray-600 mb-4 line-clamp-3">
+                    <p className="text-sm text-white/70 mb-6 line-clamp-3">
                       {post.excerpt}
                     </p>
 
                     {/* Meta */}
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <div className="flex items-center space-x-1">
+                    <div className="mb-6 flex items-center justify-between text-xs text-white/50">
+                      <span className="inline-flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{formatDate(post.publishDate)}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
+                        {formatDate(post.publishDate)}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        <span>{post.readTime}</span>
-                      </div>
+                        {post.readTime}
+                      </span>
                     </div>
 
                     {/* Tags */}
                     {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
+                      <div className="mb-6 flex flex-wrap gap-2">
                         {post.tags.slice(0, 3).map((tag, idx) => (
-                          <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          <span key={idx} className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-xs text-white/70">
                             {tag}
                           </span>
                         ))}
@@ -333,10 +341,10 @@ export default function BlogClient({ lang }: BlogClientProps) {
 
                     {/* CTA */}
                     <Link href={getLocalizedUrl(post.slug)}>
-                      <button className="w-full bg-orange-600 text-white py-2 rounded-lg font-medium hover:bg-orange-700 transition-all duration-300 flex items-center justify-center space-x-2">
-                        <span>Read Article</span>
+                      <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:border-orange-400 hover:bg-orange-400/20">
+                        {t('blog.cardCta', 'Read Article')}
                         <ArrowRight className="w-4 h-4" />
-                      </button>
+                      </span>
                     </Link>
                   </div>
                 </div>
@@ -345,7 +353,8 @@ export default function BlogClient({ lang }: BlogClientProps) {
           )}
         </div>
       </AnimatedSection>
+
+      <BannerSlot location="blog.postFooter" variant="section" className="px-6" />
     </div>
   );
 }
-

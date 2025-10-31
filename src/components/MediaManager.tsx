@@ -348,10 +348,21 @@ const MediaManager = ({ isOpen, onClose, onSelect, onSelectMultiple, mode = 'sel
     );
   };
 
-  if (!isOpen) return null;
+  // Don't return null to prevent DOM cleanup errors - use CSS to hide instead
+  if (!isOpen) {
+    return <div style={{ display: 'none' }} />;
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       {/* Notification Toast */}
       {notification.show && (
         <div className={`fixed top-4 right-4 z-[60] max-w-sm w-full transform transition-all duration-300 ${
