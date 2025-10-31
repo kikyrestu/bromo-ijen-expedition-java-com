@@ -1,1 +1,5 @@
 backups/backup-*.mswbak
+
+# Ignore backup files
+backups/*.mswbak
+*.mswbak
