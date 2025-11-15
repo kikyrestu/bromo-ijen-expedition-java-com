@@ -114,7 +114,7 @@ const defaultSectionContent = {
       {
         name: 'Mount Bromo',
         location: 'East Java',
-        image: 'https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=1200&auto=format&fit=crop',
+        image: '/uploads/1760935564110-arya-krisdyantara-caz9w5z1_im-unsplash.jpg',
         description: 'Witness the spectacular sunrise over the active volcano',
         featured: true,
         tours: 3
@@ -122,7 +122,7 @@ const defaultSectionContent = {
       {
         name: 'Mount Ijen',
         location: 'East Java',
-        image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop',
+        image: '/uploads/1760942869601-006376400_1707282570-ijen.jpg',
         description: 'Experience the mesmerizing blue fire phenomenon',
         featured: true,
         tours: 4

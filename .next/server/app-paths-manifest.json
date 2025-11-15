@@ -1,0 +1,8 @@
+{
+  "/api/media/route": "app/api/media/route.js",
+  "/maheswaradev/admin/login/page": "app/maheswaradev/admin/login/page.js",
+  "/cms/page": "app/cms/page.js",
+  "/[lang]/packages/page": "app/[lang]/packages/page.js",
+  "/[lang]/page": "app/[lang]/page.js",
+  "/[lang]/blog/[id]/page": "app/[lang]/blog/[id]/page.js"
+}

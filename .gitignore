@@ -1,5 +1,6 @@
-backups/backup-*.mswbak
+npbackups/backup-*.mswbak
 
 # Ignore backup files
 backups/*.mswbak
 *.mswbak
+node_modules

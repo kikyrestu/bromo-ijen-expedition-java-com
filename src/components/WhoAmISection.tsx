@@ -256,9 +256,9 @@ const WhoAmISection: React.FC<WhoAmISectionProps> = ({
   return (
     <section id="about" className="py-20 sm:py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <AnimatedSection animation="fadeInLeft" delay={0.2} duration={0.8}>
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-xl lg:max-w-none">
               <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full border border-orange-100">
                 <Compass className="w-4 h-4 text-orange-600" />
                 <span className="text-xs font-semibold text-orange-600 uppercase tracking-[0.3em]">
@@ -270,7 +270,7 @@ const WhoAmISection: React.FC<WhoAmISectionProps> = ({
                 {currentSlideData.content.mainTitle}
               </h2>
 
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl">
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
                 {currentSlideData.content.description}
               </p>
 
@@ -356,7 +356,7 @@ const WhoAmISection: React.FC<WhoAmISectionProps> = ({
           </AnimatedSection>
 
           <AnimatedSection animation="fadeInRight" delay={0.4} duration={0.8}>
-            <div className="relative mx-auto w-full max-w-[520px] sm:max-w-[560px] lg:max-w-[600px]">
+            <div className="relative mx-auto w-full max-w-[500px] sm:max-w-[520px] lg:max-w-[560px]">
               <div className="absolute -top-10 -left-6 hidden sm:block">
                 <img src="/assets/shape.png" alt="shape accent" className="h-20 w-20 object-contain" loading="lazy" />
               </div>
@@ -366,7 +366,7 @@ const WhoAmISection: React.FC<WhoAmISectionProps> = ({
               <div className="absolute top-4 right-6 hidden sm:block">
                 <img src="/assets/fun-3.png" alt="icon" className="h-14 w-14 object-contain" loading="lazy" />
               </div>
-              <div className="relative aspect-[16/11] sm:aspect-[16/10] lg:aspect-[16/9] min-h-[280px] sm:min-h-[360px] lg:min-h-[420px] rounded-[40px] bg-gradient-to-br from-orange-100 via-white to-purple-50 overflow-hidden shadow-2xl">
+              <div className="relative aspect-[4/3] sm:aspect-[4/3] lg:aspect-[4/3] rounded-3xl bg-gradient-to-br from-orange-100 via-white to-purple-50 overflow-hidden shadow-2xl">
                 <img
                   src={heroImage}
                   alt={imageAlt}

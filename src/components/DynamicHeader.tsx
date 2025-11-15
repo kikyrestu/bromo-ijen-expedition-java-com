@@ -184,7 +184,7 @@ const DynamicHeader = () => {
     menuItems.length > 0 ? normalizeMenuItems(menuItems) : fallbackNavItems;
 
   const desktopLinkClass =
-    'flex items-center gap-1 text-gray-100 hover:text-white transition-colors text-sm font-medium px-3 py-1.5 rounded-full hover:bg-white/10 backdrop-blur-sm';
+    'flex items-center gap-1 text-gray-100 hover:text-white transition-colors ease-out duration-200 text-sm font-medium px-2.5 py-1.5 rounded-none border-b-2 border-transparent hover:border-white/70';
 
   const renderNavChild = (node: NormalizedNavItem, onNavigate?: () => void) =>
     node.isExternal ? (
@@ -229,16 +229,14 @@ const DynamicHeader = () => {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 px-4 sm:px-6 lg:px-8">
+      <header className={`fixed inset-x-0 top-0 z-50 px-4 sm:px-6 lg:px-8 transition-all ease-out duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-md' : 'bg-transparent'}`}>
         <div
-          className={`max-w-7xl w-full mx-auto mt-4 rounded-full overflow-visible px-6 sm:px-8 lg:px-12 backdrop-blur-lg border transition-all duration-300 ${
-            isScrolled ? 'bg-black/80 border-white/30 shadow-2xl' : 'bg-transparent border-white/20 shadow-xl'
-          }`}
+          className={`max-w-7xl w-full mx-auto mt-0 overflow-visible px-6 sm:px-8 lg:px-12 transition-all duration-300`}
         >
           <div className="flex items-center justify-between h-16 sm:h-20">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
               <Link href={getLocalizedUrl('/')} className="flex items-center gap-3">
-                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 shadow-lg">
+                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-900/70 shadow-lg">
                   {brandSettings?.siteLogo || headerSettings?.logo ? (
                     <img
                       src={brandSettings?.siteLogo || headerSettings?.logo}
@@ -298,7 +296,7 @@ const DynamicHeader = () => {
 
                     {hasChildren && (
                       <div
-                        className={`absolute left-0 top-full mt-1 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl py-2 min-w-[180px] transition-all duration-150 z-[9999] ${
+                        className={`absolute left-0 top-full mt-1 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl py-2 min-w-[180px] transition-all ease-out duration-300 z-[9999] ${
                           isOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
                         }`}
                       >
@@ -316,7 +314,7 @@ const DynamicHeader = () => {
                 <select
                   value={currentLanguage}
                   onChange={(e) => setLanguage(e.target.value as Language)}
-                  className="rounded-full border border-white/30 bg-white/10 px-3 py-1.5 text-xs font-medium text-white outline-none hover:bg-white/20"
+                  className="rounded-md border border-white/30 bg-transparent px-3 py-1.5 text-xs font-medium text-white outline-none hover:border-white/50"
                 >
                   {languages.map((lang) => (
                     <option key={lang.code} value={lang.code} className="text-gray-900">
@@ -328,7 +326,7 @@ const DynamicHeader = () => {
 
               <a
                 href={`mailto:${contactEmail}`}
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/20 text-xs sm:text-sm font-medium shadow-sm hover:shadow-lg transition-shadow bg-white/10 text-white hover:bg-white/20"
+                className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-md border border-white/30 text-xs sm:text-sm font-medium text-white transition-colors hover:border-white/60"
                 aria-label="Contact us"
               >
                 <Mail className="w-4 h-4" />
@@ -337,7 +335,7 @@ const DynamicHeader = () => {
 
               <button
                 type="button"
-                className="md:hidden p-2 rounded-full hover:bg-white/10"
+                className="md:hidden p-2 rounded-md hover:bg-white/10"
                 onClick={() => {
                   setIsMenuOpen((prev) => !prev);
                   setOpenDropdown(null);
@@ -349,7 +347,7 @@ const DynamicHeader = () => {
             </div>
           </div>
 
-          <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden border-t border-white/20 bg-black/80 backdrop-blur-xl rounded-b-[32px]`}>
+          <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden border-t border-white/20 bg-transparent rounded-b-none transition-all ease-in-out duration-300`}>
             <div className="px-4 pt-4 pb-6 space-y-4">
               <div className="flex flex-col gap-3">
                 {topNavigation.map((item) => {
@@ -362,7 +360,7 @@ const DynamicHeader = () => {
                         <button
                           type="button"
                           onClick={() => setOpenDropdown((prev) => (prev === item.id ? null : item.id))}
-                          className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full font-medium text-white hover:bg-white/10"
+                          className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
                         >
                           {item.title}
                           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -384,7 +382,7 @@ const DynamicHeader = () => {
                       href={item.url}
                       target={item.target || '_self'}
                       rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full font-medium text-white hover:bg-white/10"
+                      className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
                       onClick={handleNavigate}
                     >
                       {item.title}
@@ -394,7 +392,7 @@ const DynamicHeader = () => {
                       key={item.id}
                       href={item.url}
                       target={item.target && item.target !== '_self' ? item.target : undefined}
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full font-medium text-white hover:bg-white/10"
+                      className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
                       onClick={handleNavigate}
                     >
                       {item.title}
@@ -403,13 +401,13 @@ const DynamicHeader = () => {
                 })}
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3">
+              <div className="rounded-md border border-white/20 bg-transparent px-3 py-3">
                 <div className="flex items-center space-x-2">
                   <Globe className="w-4 h-4 text-white/80" />
                   <select
                     value={currentLanguage}
                     onChange={(e) => setLanguage(e.target.value as Language)}
-                    className="w-full rounded-lg border border-white/30 bg-white/10 px-3 py-2 font-medium text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full rounded-md border border-white/30 bg-transparent px-3 py-2 font-medium text-white transition-all duration-300 focus:outline-none"
                   >
                     {languages.map((lang) => (
                       <option key={lang.code} value={lang.code} className="text-gray-900">
@@ -423,7 +421,7 @@ const DynamicHeader = () => {
               <div className="pt-2 border-t border-white/10">
                 <a
                   href={`mailto:${contactEmail}`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-white hover:bg-white/10"
+                  className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
                 >
                   <Mail className="w-4 h-4" />
                   <span>{contactMobileLabel}</span>

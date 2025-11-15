@@ -23,6 +23,7 @@ export default function RootLayout({
     <html>
       <body
         className={`${poppins.variable} font-poppins antialiased`}
+        suppressHydrationWarning
       >
         <DynamicFavicon />
         {children}

@@ -451,7 +451,75 @@ async function main() {
 
   await prisma.sectionContent.upsert({
     where: { sectionId: 'exclusiveDestinations' },
-    update: {},
+    update: {
+      destinations: JSON.stringify([
+        {
+          name: 'Mount Bromo',
+          location: 'Bromo Tengger Semeru National Park',
+          category: 'Volcano',
+          rating: 4.9,
+          visitors: '10,000+',
+          duration: '1-2 days',
+          price: 'From $50',
+          description: 'Witness the spectacular sunrise over the active volcano',
+          highlights: ['Sunrise View', 'Crater Walk', 'Sea of Sand'],
+          image: '/uploads/1760935564110-arya-krisdyantara-caz9w5z1_im-unsplash.jpg',
+          featured: true
+        },
+        {
+          name: 'Ijen Crater',
+          location: 'Banyuwangi Regency',
+          category: 'Volcano',
+          rating: 4.8,
+          visitors: '5,000+',
+          duration: '1 day',
+          price: 'From $40',
+          description: 'Experience the mesmerizing blue fire phenomenon',
+          highlights: ['Blue Fire', 'Sulfur Mining', 'Crater Lake'],
+          image: '/uploads/1760942869601-006376400_1707282570-ijen.jpg',
+          featured: true
+        },
+        {
+          name: 'Bali',
+          location: 'Bali, Indonesia',
+          category: 'Island',
+          rating: 4.9,
+          visitors: '50,000+',
+          duration: '3-7 days',
+          price: 'From $100',
+          description: 'The Island of Gods with stunning beaches, temples, and rich culture',
+          highlights: ['Beaches', 'Temples', 'Rice Terraces', 'Culture'],
+          image: '/uploads/olvu6sgb3dcdjwlcpts3.jpg',
+          featured: true
+        },
+        {
+          name: 'Prambanan Temple',
+          location: 'Yogyakarta, Indonesia',
+          category: 'Temple',
+          rating: 4.9,
+          visitors: '15,000+',
+          duration: 'Half day',
+          price: 'From $25',
+          description: 'Largest Hindu temple complex in Indonesia, a UNESCO World Heritage Site',
+          highlights: ['Hindu Temple', 'UNESCO Site', 'Architecture', 'History'],
+          image: '/uploads/1760936110326-esaias-tan-gllwarlk_fs-unsplash.jpg',
+          featured: true
+        },
+        {
+          name: 'Borobudur Temple',
+          location: 'Magelang, Central Java',
+          category: 'Temple',
+          rating: 4.9,
+          visitors: '20,000+',
+          duration: 'Half day',
+          price: 'From $30',
+          description: 'World\'s largest Buddhist temple, a UNESCO World Heritage Site',
+          highlights: ['Buddhist Temple', 'UNESCO Site', 'Sunrise View', 'History'],
+          image: '/uploads/1760935903813-arya-krisdyantara-am6ofdzz_4k-unsplash.jpg',
+          featured: true
+        }
+      ]),
+    },
     create: {
       sectionId: 'exclusiveDestinations',
       title: 'Exclusive Destinations',
@@ -472,7 +540,7 @@ async function main() {
           price: 'From $50',
           description: 'Witness the spectacular sunrise over the active volcano',
           highlights: ['Sunrise View', 'Crater Walk', 'Sea of Sand'],
-          image: '/uploads/bromo.jpg',
+          image: '/uploads/1760935564110-arya-krisdyantara-caz9w5z1_im-unsplash.jpg',
           featured: true
         },
         {
@@ -485,20 +553,59 @@ async function main() {
           price: 'From $40',
           description: 'Experience the mesmerizing blue fire phenomenon',
           highlights: ['Blue Fire', 'Sulfur Mining', 'Crater Lake'],
-          image: '/uploads/ijen.jpg',
+          image: '/uploads/1760942869601-006376400_1707282570-ijen.jpg',
           featured: true
         },
         {
-          name: 'Madakaripura Waterfall',
-          location: 'Probolinggo Regency',
-          category: 'Waterfall',
+          name: 'Bali',
+          location: 'Bali, Indonesia',
+          category: 'Island',
+          rating: 4.9,
+          visitors: '50,000+',
+          duration: '3-7 days',
+          price: 'From $100',
+          description: 'The Island of Gods with stunning beaches, temples, and rich culture',
+          highlights: ['Beaches', 'Temples', 'Rice Terraces', 'Culture'],
+          image: '/uploads/olvu6sgb3dcdjwlcpts3.jpg',
+          featured: true
+        },
+        {
+          name: 'Yogyakarta',
+          location: 'Yogyakarta, Indonesia',
+          category: 'City',
           rating: 4.7,
-          visitors: '3,000+',
+          visitors: '30,000+',
+          duration: '2-3 days',
+          price: 'From $60',
+          description: 'Cultural heart of Java with royal palaces and traditional arts',
+          highlights: ['Royal Palace', 'Traditional Arts', 'Cuisine', 'Culture'],
+          image: '/uploads/1760952200671-arya-krisdyantara-am6ofdzz_4k-unsplash.jpg',
+          featured: true
+        },
+        {
+          name: 'Prambanan Temple',
+          location: 'Yogyakarta, Indonesia',
+          category: 'Temple',
+          rating: 4.9,
+          visitors: '15,000+',
+          duration: 'Half day',
+          price: 'From $25',
+          description: 'Largest Hindu temple complex in Indonesia, a UNESCO World Heritage Site',
+          highlights: ['Hindu Temple', 'UNESCO Site', 'Architecture', 'History'],
+          image: '/uploads/1760936110326-esaias-tan-gllwarlk_fs-unsplash.jpg',
+          featured: true
+        },
+        {
+          name: 'Borobudur Temple',
+          location: 'Magelang, Central Java',
+          category: 'Temple',
+          rating: 4.9,
+          visitors: '20,000+',
           duration: 'Half day',
           price: 'From $30',
-          description: 'Indonesia\'s tallest waterfall hidden in a cave',
-          highlights: ['Tallest Waterfall', 'Cave Entrance', 'Sacred Site'],
-          image: '/uploads/madakaripura.jpg',
+          description: 'World\'s largest Buddhist temple, a UNESCO World Heritage Site',
+          highlights: ['Buddhist Temple', 'UNESCO Site', 'Sunrise View', 'History'],
+          image: '/uploads/1760935903813-arya-krisdyantara-am6ofdzz_4k-unsplash.jpg',
           featured: true
         }
       ]),
