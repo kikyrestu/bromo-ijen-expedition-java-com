@@ -1003,7 +1003,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/root/tourandtravel/src/generated/prisma",
+      "value": "D:\\tourandtravel\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -1012,7 +1012,7 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "debian-openssl-3.0.x",
+        "value": "windows",
         "native": true
       },
       {
@@ -1021,7 +1021,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/root/tourandtravel/prisma/schema.prisma",
+    "sourceFilePath": "D:\\tourandtravel\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -1035,6 +1035,7 @@ const config = {
     "db"
   ],
   "activeProvider": "mysql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
