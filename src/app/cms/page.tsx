@@ -2274,9 +2274,9 @@ const CMSDashboardPage = () => {
               <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               <RefreshCw className="absolute inset-0 m-auto w-8 h-8 text-blue-400 animate-pulse" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Restoring System...</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Restoring System... Please Wait</h3>
             <p className="text-gray-400 text-sm mb-6">
-              Please do not close this window. This process may take a few minutes depending on the backup size.
+              Do not close this window. This process may take a few minutes depending on the backup size.
             </p>
             <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 w-full animate-pulse origin-left scale-x-50"></div>
