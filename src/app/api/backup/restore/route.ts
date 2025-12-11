@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { writeFile } from 'fs/promises';
-
-const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,8 +17,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid file format. Must be .mswbak' }, { status: 400 });
     }
 
-    console.log(`🚀 Starting restore process for: ${file.name}`);
-
     // Save uploaded file to temp location
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -33,26 +28,59 @@ export async function POST(request: NextRequest) {
 
     const tempFilePath = path.join(tempDir, file.name);
     await writeFile(tempFilePath, buffer);
-    console.log(`   ✅ File saved to: ${tempFilePath}`);
 
-    // Run restore script
-    const scriptPath = path.join(process.cwd(), 'scripts', 'restore-complete.js');
-    
-    // Use node to run the script
-    const { stdout, stderr } = await execAsync(`"${process.execPath}" "${scriptPath}" "${tempFilePath}"`, {
-      cwd: process.cwd(),
-      maxBuffer: 10 * 1024 * 1024
+    // Create a TransformStream for the response
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`🚀 Starting restore process for: ${file.name}\n`));
+        controller.enqueue(encoder.encode(`✅ File saved to: ${tempFilePath}\n\n`));
+
+        const scriptPath = path.join(process.cwd(), 'scripts', 'restore-complete.js');
+        
+        // Use spawn instead of exec for streaming
+        const child = spawn(process.execPath, [scriptPath, tempFilePath], {
+          cwd: process.cwd()
+        });
+
+        child.stdout.on('data', (data) => {
+          controller.enqueue(encoder.encode(data));
+        });
+
+        child.stderr.on('data', (data) => {
+          controller.enqueue(encoder.encode(data));
+        });
+
+        child.on('close', (code) => {
+          // Cleanup temp file
+          try {
+            if (fs.existsSync(tempFilePath)) {
+              fs.unlinkSync(tempFilePath);
+            }
+          } catch (e) {
+            console.error('Failed to cleanup temp file:', e);
+          }
+
+          if (code === 0) {
+            controller.enqueue(encoder.encode('\n✨ RESTORE PROCESS COMPLETED SUCCESSFULLY! ✨\n'));
+          } else {
+            controller.enqueue(encoder.encode(`\n❌ Restore process exited with code ${code}\n`));
+          }
+          controller.close();
+        });
+
+        child.on('error', (err) => {
+          controller.enqueue(encoder.encode(`\n❌ Failed to start restore process: ${err.message}\n`));
+          controller.close();
+        });
+      }
     });
 
-    console.log('Restore output:', stdout);
-
-    // Cleanup temp file
-    fs.unlinkSync(tempFilePath);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Restore completed successfully',
-      details: stdout
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+      },
     });
 
   } catch (error: any) {
@@ -60,8 +88,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'Restore failed',
-        details: error.stderr || error.stdout 
+        error: error.message || 'Restore failed'
       },
       { status: 500 }
     );
