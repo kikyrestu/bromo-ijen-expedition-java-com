@@ -148,6 +148,8 @@ const CMSDashboardPage = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreLogs, setRestoreLogs] = useState<string | null>(null);
   const [showMediaManager, setShowMediaManager] = useState(false); // For form image selection
   const [currentImageField, setCurrentImageField] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -1634,7 +1636,7 @@ const CMSDashboardPage = () => {
                   `Are you sure you want to restore from ${file.name}? Current data will be overwritten!`,
                   async () => {
                     try {
-                      showToast('info', '⏳ Uploading and restoring... This may take a while.');
+                      setIsRestoring(true);
                       
                       const formData = new FormData();
                       formData.append('file', file);
@@ -1646,14 +1648,19 @@ const CMSDashboardPage = () => {
                       
                       const data = await response.json();
                       
+                      setIsRestoring(false);
+                      
                       if (data.success) {
+                        setRestoreLogs(data.details);
                         showToast('success', '✅ System restored successfully!');
-                        setTimeout(() => window.location.reload(), 2000);
                       } else {
+                        setRestoreLogs(data.details || data.error);
                         showToast('error', `❌ Restore failed: ${data.error}`);
                       }
-                    } catch (error) {
+                    } catch (error: any) {
+                      setIsRestoring(false);
                       console.error('Restore error:', error);
+                      setRestoreLogs(`Critical Error: ${error.message}`);
                       showToast('error', '❌ Failed to restore system');
                     }
                   },
@@ -2257,6 +2264,63 @@ const CMSDashboardPage = () => {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ ...confirmDialog, show: false })}
       />
+
+      {/* Restore Loading Overlay */}
+      {isRestoring && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#0c1f30] p-8 rounded-2xl border border-blue-500/30 shadow-2xl max-w-md w-full text-center">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 border-4 border-blue-500/30 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <RefreshCw className="absolute inset-0 m-auto w-8 h-8 text-blue-400 animate-pulse" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Restoring System...</h3>
+            <p className="text-gray-400 text-sm mb-6">
+              Please do not close this window. This process may take a few minutes depending on the backup size.
+            </p>
+            <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 w-full animate-pulse origin-left scale-x-50"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Logs Modal */}
+      {restoreLogs && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0c1f30] rounded-2xl border border-white/10 shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-400" />
+                Restore Logs
+              </h3>
+              <button 
+                onClick={() => {
+                  setRestoreLogs(null);
+                  window.location.reload();
+                }}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-6 overflow-auto flex-1 bg-black/50 font-mono text-sm">
+              <pre className="text-green-400 whitespace-pre-wrap">{restoreLogs}</pre>
+            </div>
+            <div className="p-6 border-t border-white/10 flex justify-end">
+              <button
+                onClick={() => {
+                  setRestoreLogs(null);
+                  window.location.reload();
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors font-medium"
+              >
+                Close & Reload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
