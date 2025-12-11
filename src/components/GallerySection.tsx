@@ -1,11 +1,12 @@
 'use client';
 
-import { Camera, Heart, Eye, Share2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Camera, Heart, Eye, Share2, X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import AnimatedSection from './AnimatedSection';
 
-// Utility function to strip HTML tags
 const stripHtmlTags = (html: string): string => {
   if (!html) return '';
   return html.replace(/<[^>]*>/g, '');
@@ -23,31 +24,6 @@ interface GalleryItem {
   createdAt: string;
 }
 
-// Preset grid positions untuk 6x9 grid
-const GRID_PRESETS = [
-  // Large items (2x3 atau 3x2)
-  { span: 'col-span-2 row-span-3', class: '' },
-  { span: 'col-span-2 row-span-3', class: '' },
-  { span: 'col-span-2 row-span-2', class: '' },
-  { span: 'col-span-3 row-span-2', class: '' },
-  { span: 'col-span-2 row-span-2', class: '' },
-  
-  // Vertical items (1x4)
-  { span: 'row-span-4', class: '' },
-  { span: 'row-span-4', class: '' },
-  
-  // Medium items (2x2)
-  { span: 'col-span-2 row-span-2', class: '' },
-  { span: 'col-span-2 row-span-2', class: '' },
-  { span: 'row-span-6', class: '' },
-  { span: 'row-span-4', class: '' },
-  
-  // Small items (1x2)
-  { span: 'row-span-2', class: '' },
-  { span: 'col-span-2 row-span-3', class: '' },
-  { span: 'col-span-2', class: '' },
-];
-
 interface GallerySectionProps {
   overrideContent?: {
     title?: string;
@@ -61,7 +37,6 @@ interface GallerySectionProps {
     sortBy?: string;
     showFilters?: boolean;
     enableLightbox?: boolean;
-    // Animation settings
     enableAutoSlide?: boolean;
     autoSlideInterval?: number;
     transitionEffect?: string;
@@ -75,28 +50,10 @@ const GallerySection = ({ overrideContent }: GallerySectionProps = {}) => {
   const [sectionContent, setSectionContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  // Auto-slide functionality for Carousel
-  useEffect(() => {
-    if (
-      sectionContent?.layoutStyle === 'carousel' && 
-      sectionContent?.enableAutoSlide && 
-      galleryItems.length > 0
-    ) {
-      const interval = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % galleryItems.length);
-      }, (sectionContent?.autoSlideInterval || 5) * 1000);
-
-      return () => clearInterval(interval);
-    }
-  }, [sectionContent, galleryItems.length]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch section content (skip if overrideContent provided)
         if (!overrideContent) {
           const sectionResponse = await fetch(`/api/sections?language=${currentLanguage}`);
           const sectionData = await sectionResponse.json();
@@ -108,11 +65,9 @@ const GallerySection = ({ overrideContent }: GallerySectionProps = {}) => {
             }
           }
         } else {
-          // Use override content directly
           setSectionContent(overrideContent);
         }
 
-        // Fetch gallery items
         const queryParams = new URLSearchParams();
         if (currentLanguage !== 'id') queryParams.append('language', currentLanguage);
         
@@ -134,11 +89,9 @@ const GallerySection = ({ overrideContent }: GallerySectionProps = {}) => {
 
   const openLightbox = (index: number) => {
     setSelectedImageIndex(index);
-    setLightboxOpen(true);
   };
 
   const closeLightbox = () => {
-    setLightboxOpen(false);
     setSelectedImageIndex(null);
   };
 
@@ -154,9 +107,8 @@ const GallerySection = ({ overrideContent }: GallerySectionProps = {}) => {
     }
   };
 
-  // Keyboard navigation
   useEffect(() => {
-    if (!lightboxOpen) return;
+    if (selectedImageIndex === null) return;
     
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeLightbox();
@@ -166,435 +118,147 @@ const GallerySection = ({ overrideContent }: GallerySectionProps = {}) => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [lightboxOpen, selectedImageIndex, galleryItems.length]);
+  }, [selectedImageIndex, galleryItems.length]);
 
-  const getGridPreset = (index: number) => {
-    return GRID_PRESETS[index % GRID_PRESETS.length];
-  };
-
-  if (loading) {
-    return (
-      <section id="gallery" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="mb-4">
-              <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                {sectionContent?.subtitle || t('gallery.subtitle')}
-              </span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              {sectionContent?.title || t('gallery.title')}
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              {stripHtmlTags(sectionContent?.description) || t('gallery.loading')}
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  if (loading) return null;
 
   return (
     <>
-      <section id="gallery" className="py-16 sm:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Clean Header */}
-          <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-            <div className="text-center mb-12">
-              {/* Badge */}
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full mb-4">
-                <Camera className="w-4 h-4 text-orange-600" />
-                <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
-                  {sectionContent?.subtitle || t('gallery.subtitle')}
-                </span>
-              </div>
-              
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+      <section className="py-16 md:py-20 bg-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <AnimatedSection animation="fadeInUp">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-900 text-xs font-bold tracking-wider uppercase mb-4 shadow-sm">
+                <Camera className="w-3.5 h-3.5" />
+                {sectionContent?.subtitle || t('gallery.subtitle')}
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight leading-tight">
                 {sectionContent?.title || t('gallery.title')}
               </h2>
-              
-              <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                {stripHtmlTags(sectionContent?.description) || 'Explore our stunning photo collection'}
-              </p>
-            </div>
-          </AnimatedSection>
+              <div 
+                className="text-base md:text-lg text-slate-600 leading-relaxed [&>p]:mb-2 last:[&>p]:mb-0"
+                dangerouslySetInnerHTML={{ __html: sectionContent?.description || 'Explore our stunning photo collection' }}
+              />
+            </AnimatedSection>
+          </div>
 
-          {/* Gallery Grid - Multiple Layouts */}
-          <AnimatedSection animation="scaleIn" delay={0.4} duration={1.0}>
-            {galleryItems.length === 0 ? (
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center text-gray-500">
-                  <Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p>No gallery items available. Please add content from the CMS.</p>
-                </div>
-              </div>
-            ) : sectionContent?.layoutStyle === 'carousel' ? (
-              // ============ CAROUSEL LAYOUT ============
-              <div className="relative overflow-hidden">
+          {/* Masonry Grid */}
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+            {galleryItems.map((item, index) => (
+              <AnimatedSection
+                key={item.id}
+                animation="fadeInUp"
+                delay={index * 0.05}
+                className="break-inside-avoid"
+              >
                 <div 
-                  className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory scrollbar-hide"
-                  style={{
-                    scrollBehavior: sectionContent?.transitionEffect === 'instant' ? 'auto' : 'smooth',
-                    msOverflowStyle: 'none',
-                    scrollbarWidth: 'none',
-                    WebkitOverflowScrolling: 'touch',
-                  }}
-                  ref={(el) => {
-                    if (el && sectionContent?.enableAutoSlide) {
-                      const scrollWidth = el.scrollWidth / galleryItems.length;
-                      el.scrollTo({
-                        left: scrollWidth * currentSlide,
-                        behavior: sectionContent?.transitionEffect === 'instant' ? 'auto' : 'smooth'
-                      });
-                    }
-                  }}
+                  className="group relative rounded-2xl overflow-hidden cursor-pointer bg-slate-100"
+                  onClick={() => openLightbox(index)}
                 >
-                  {galleryItems.map((item, index) => {
-                    // Get animation speed class
-                    const speedClass = 
-                      sectionContent?.animationSpeed === 'fast' ? 'duration-300' :
-                      sectionContent?.animationSpeed === 'slow' ? 'duration-700' :
-                      'duration-500';
+                  {item.image ? (
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={600}
+                      height={800}
+                      className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-slate-200 flex items-center justify-center">
+                      <Camera className="w-12 h-12 text-slate-400" />
+                    </div>
+                  )}
 
-                    return (
-                    <div
-                      key={item.id}
-                      className="flex-none w-[85vw] sm:w-[450px] snap-center"
-                    >
-                      <div
-                        className={`group cursor-pointer overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all ${speedClass} h-[500px]`}
-                        onClick={() => {
-                          if (sectionContent?.enableLightbox !== false) {
-                            openLightbox(index);
-                          }
-                        }}
-                      >
-                        <div className="relative w-full h-full">
-                          {/* Image */}
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className={`w-full h-full object-cover group-hover:scale-110 transition-transform ${speedClass}`}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center">
-                              <div className="text-center text-white">
-                                <Camera className="w-16 h-16 mx-auto mb-4" />
-                                <p className="text-xl font-bold">{item.title}</p>
-                                <p className="text-sm mt-2">{item.category}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Gradient Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-
-                          {/* Content */}
-                          <div className="absolute inset-0 flex flex-col justify-between p-6">
-                            {/* Top Badge */}
-                            <div className="flex items-center justify-between">
-                              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-gray-900">
-                                {item.category}
-                              </span>
-                              <button className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-200 hover:scale-110">
-                                <Share2 className="w-5 h-5 text-white" />
-                              </button>
-                            </div>
-
-                            {/* Bottom Info */}
-                            <div className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                              <h3 className="text-white font-bold text-2xl mb-3 leading-tight drop-shadow-lg">
-                                {item.title}
-                              </h3>
-                              
-                              <div className="flex items-center space-x-4">
-                                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full">
-                                  <Heart className="w-4 h-4 text-white" />
-                                  <span className="text-sm text-white font-semibold">{item.likes}</span>
-                                </div>
-                                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full">
-                                  <Eye className="w-4 h-4 text-white" />
-                                  <span className="text-sm text-white font-semibold">{item.views}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex flex-col justify-end p-6 opacity-0 group-hover:opacity-100">
+                    <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                      <span className="inline-block px-2.5 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold rounded-full mb-2 uppercase tracking-wider">
+                        {item.category}
+                      </span>
+                      <h3 className="text-white font-bold text-lg mb-1.5">{item.title}</h3>
+                      <div className="flex items-center gap-3 text-white/90 text-xs font-medium">
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3.5 h-3.5" /> {item.likes}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3.5 h-3.5" /> {item.views}
+                        </span>
                       </div>
                     </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : sectionContent?.layoutStyle === 'bento' ? (
-              // ============ BENTO LAYOUT (Modern Asymmetric) ============
-              <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-4 auto-rows-[200px]">
-                {galleryItems.map((item, index) => {
-                  // Bento pattern - varying sizes
-                  const bentoPatterns = [
-                    'col-span-4 row-span-2', // Large
-                    'col-span-4 md:col-span-4 row-span-1', // Medium
-                    'col-span-2 md:col-span-4 row-span-1', // Medium
-                    'col-span-2 md:col-span-4 row-span-2', // Tall
-                    'col-span-4 md:col-span-4 row-span-1', // Wide
-                    'col-span-2 row-span-1', // Small
-                    'col-span-2 row-span-1', // Small
-                    'col-span-4 md:col-span-8 row-span-1', // Extra Wide
-                  ];
-                  const pattern = bentoPatterns[index % bentoPatterns.length];
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={`${pattern} group cursor-pointer overflow-hidden rounded-3xl hover:scale-[0.98] transition-all duration-500 shadow-lg hover:shadow-2xl`}
-                      onClick={() => {
-                        if (sectionContent?.enableLightbox !== false) {
-                          openLightbox(index);
-                        }
-                      }}
-                    >
-                      <div className="relative w-full h-full">
-                        {/* Image */}
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center">
-                            <div className="text-center text-white">
-                              <Camera className="w-12 h-12 mx-auto mb-2" />
-                              <p className="text-lg font-bold">{item.title}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Modern Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                        {/* Content - Bottom Aligned */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-                          <div className="flex items-end justify-between">
-                            <div>
-                              <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-md rounded-lg text-xs font-semibold text-white mb-2">
-                                {item.category}
-                              </span>
-                              <h3 className="text-white font-bold text-lg leading-tight">
-                                {item.title}
-                              </h3>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
-                                <Heart className="w-3 h-3 text-white" />
-                                <span className="text-xs text-white font-semibold">{item.likes}</span>
-                              </div>
-                              <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
-                                <Eye className="w-3 h-3 text-white" />
-                                <span className="text-xs text-white font-semibold">{item.views}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : sectionContent?.layoutStyle === 'grid' ? (
-              // ============ GRID LAYOUT (Clean Uniform) ============
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {galleryItems.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="aspect-square group cursor-pointer overflow-hidden rounded-xl hover:shadow-2xl transition-all duration-300"
-                    onClick={() => {
-                      if (sectionContent?.enableLightbox !== false) {
-                        openLightbox(index);
-                      }
-                    }}
-                  >
-                    <div className="relative w-full h-full">
-                      {/* Image */}
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
-                          <div className="text-center text-white">
-                            <Camera className="w-10 h-10 mx-auto mb-2" />
-                            <p className="text-sm font-medium">{item.title}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Simple Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-300 flex items-end p-4">
-                        <div className="w-full transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                          <div className="flex items-center justify-between">
-                            <span className="text-white font-bold text-sm">{item.title}</span>
-                            <span className="px-2 py-1 bg-orange-500 rounded text-xs text-white font-semibold">
-                              {item.category}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-2">
-                            <div className="flex items-center gap-1">
-                              <Heart className="w-3 h-3 text-white" />
-                              <span className="text-xs text-white">{item.likes}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="w-3 h-3 text-white" />
-                              <span className="text-xs text-white">{item.views}</span>
-                            </div>
-                          </div>
-                        </div>
+                    
+                    <div className="absolute top-4 right-4">
+                      <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+                        <ZoomIn className="w-4 h-4 text-white" />
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              // ============ MASONRY LAYOUT (Default - Pinterest Style) ============
-              <div className="grid grid-cols-6 grid-rows-9 gap-2 auto-rows-auto">
-                {galleryItems.map((item, index) => {
-                  const preset = getGridPreset(index);
-                  return (
-                    <div
-                      key={item.id}
-                      className={`${preset.span} group cursor-pointer overflow-hidden rounded-lg hover:scale-[1.02] transition-transform duration-300`}
-                      onClick={() => {
-                        if (sectionContent?.enableLightbox !== false) {
-                          openLightbox(index);
-                        }
-                      }}
-                    >
-                      <div className="relative w-full h-full">
-                        {/* Image */}
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                            <div className="text-center text-white">
-                              <div className="w-12 h-12 bg-gray-600 rounded-lg mb-2 mx-auto flex items-center justify-center">
-                                <Camera className="w-6 h-6 text-gray-300" />
-                              </div>
-                              <p className="text-xs sm:text-sm font-medium">{item.title}</p>
-                              <p className="text-xs text-gray-300 mt-1">{item.category}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Overlay on hover */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex flex-col justify-between p-4">
-                          {/* Top Content */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-semibold text-white bg-orange-600 px-2 py-1 rounded-full">
-                                {item.category}
-                              </span>
-                              <button className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors duration-200">
-                                <Share2 className="w-4 h-4 text-white" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Bottom Content */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <h3 className="text-white font-bold text-sm mb-2 leading-tight">
-                              {item.title}
-                            </h3>
-                            
-                            {/* Stats */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <div className="flex items-center space-x-1">
-                                  <Heart className="w-3 h-3 text-white" />
-                                  <span className="text-xs text-white/90">{item.likes}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Eye className="w-3 h-3 text-white" />
-                                  <span className="text-xs text-white/90">{item.views}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </AnimatedSection>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Lightbox Modal */}
-      {lightboxOpen && selectedImageIndex !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md" onClick={closeLightbox}>
-          <div className="relative w-full h-full flex items-center justify-center">
-            {/* Close Button */}
+      {/* Lightbox */}
+      <AnimatePresence>
+        {selectedImageIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
+            onClick={closeLightbox}
+          >
             <button
               onClick={closeLightbox}
-              className="absolute top-4 right-4 z-10 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors duration-200"
+              className="absolute top-6 right-6 z-50 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
             >
               <X className="w-6 h-6 text-white" />
             </button>
 
-            {/* Image */}
-            <div className="relative max-w-7xl mx-auto px-4" onClick={(e) => e.stopPropagation()}>
-              <div className="mb-4 text-center">
-                <img
+            <button
+              onClick={(e) => { e.stopPropagation(); prevImage(); }}
+              className="absolute left-4 md:left-8 z-50 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+            >
+              <ChevronLeft className="w-8 h-8 text-white" />
+            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); nextImage(); }}
+              className="absolute right-4 md:right-8 z-50 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+            >
+              <ChevronRight className="w-8 h-8 text-white" />
+            </button>
+
+            <motion.div
+              key={selectedImageIndex}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative max-w-5xl max-h-[85vh] w-full h-full flex flex-col items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                <Image
                   src={galleryItems[selectedImageIndex].image}
                   alt={galleryItems[selectedImageIndex].title}
-                  className="max-h-[80vh] w-auto mx-auto rounded-lg shadow-2xl"
+                  fill
+                  className="object-contain"
+                  unoptimized
                 />
-                
-                <div className="mt-4 text-white">
-                  <h3 className="text-2xl font-bold mb-2">{galleryItems[selectedImageIndex].title}</h3>
-                  <p className="text-sm text-white/70 mb-2">
-                    {selectedImageIndex + 1} of {galleryItems.length}
-                  </p>
-                  {galleryItems[selectedImageIndex].description && (
-                    <p className="text-gray-300 max-w-2xl mx-auto">
-                      {galleryItems[selectedImageIndex].description}
-                    </p>
-                  )}
-                </div>
               </div>
-            </div>
-
-            {/* Navigation Arrows */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                prevImage();
-              }}
-              className="absolute left-4 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors duration-200"
-            >
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </button>
-            
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                nextImage();
-              }}
-              className="absolute right-4 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors duration-200"
-            >
-              <ChevronRight className="w-6 h-6 text-white" />
-            </button>
-          </div>
-        </div>
-      )}
+              <div className="mt-6 text-center text-white">
+                <h3 className="text-2xl font-bold mb-2">{galleryItems[selectedImageIndex].title}</h3>
+                <p className="text-white/70 max-w-2xl mx-auto text-lg">
+                  {galleryItems[selectedImageIndex].description}
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

@@ -32,7 +32,11 @@ import {
   X,
   EyeOff,
   Eye as EyeIcon,
-  Trash2
+  Trash2,
+  Upload,
+  FileText,
+  Activity,
+  Image as ImageIcon
 } from 'lucide-react';
 
 import CMSForm from '@/components/CMSForm';
@@ -47,6 +51,7 @@ import Toast from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import UsersManager from '@/components/cms/UsersManager';
 import SeoManager from '@/components/cms/SeoManager';
+import SeoManagementList from '@/components/cms/SeoManagementList';
 import TemplatesManager from '@/components/cms/TemplatesManager';
 import ApiKeysManager from '@/components/cms/ApiKeysManager';
 import BannerManager from '@/components/cms/BannerManager';
@@ -357,7 +362,10 @@ const CMSDashboardPage = () => {
           siteName: data.data.siteName ?? prev.siteName ?? '',
           siteDescription: data.data.siteDescription ?? prev.siteDescription ?? '',
           defaultOgImage: data.data.defaultOgImage ?? prev.defaultOgImage ?? '',
-          siteUrl: data.data.siteUrl ?? prev.siteUrl ?? ''
+          siteUrl: data.data.siteUrl ?? prev.siteUrl ?? '',
+          googleSiteVerification: data.data.googleSiteVerification ?? prev.googleSiteVerification ?? '',
+          bingSiteVerification: data.data.bingSiteVerification ?? prev.bingSiteVerification ?? '',
+          googleVerificationMethod: data.data.googleSiteVerification?.endsWith('.html') ? 'file' : 'meta'
         }));
       }
     } catch (error) {
@@ -569,6 +577,14 @@ const CMSDashboardPage = () => {
     
     // Preprocess data for form display
     const processedItem = { ...item };
+
+    // Use raw numeric values for price fields if available (fix for NaN issue in form)
+    if (processedItem.priceRaw !== undefined) {
+      processedItem.price = processedItem.priceRaw;
+    }
+    if (processedItem.originalPriceRaw !== undefined) {
+      processedItem.originalPrice = processedItem.originalPriceRaw;
+    }
 
     // For packages, convert arrays to textarea-friendly format
     if (activeTab === 'packages') {
@@ -889,82 +905,106 @@ const CMSDashboardPage = () => {
   const renderSettings = () => (
     <div className="space-y-6">
       {/* Media Manager & API Tools */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tools & Resources</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <FolderOpen className="w-5 h-5 text-orange-400" />
+          Tools & Resources
+        </h3>
+        <p className="text-gray-300 mb-6">
           Access media library, API documentation, and testing tools.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={() => {
+              setCurrentImageField('');
+              setShowMediaManager(true);
+            }}
+            className="flex items-center justify-center gap-3 p-4 bg-[#0c1f30] border border-white/10 rounded-lg hover:border-orange-500/50 hover:bg-[#0c1f30]/80 transition-all group"
+          >
+            <div className="p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+              <ImageIcon className="w-6 h-6 text-blue-400" />
+            </div>
+            <div className="text-left">
+              <h4 className="font-semibold text-white text-sm">Media Manager</h4>
+              <p className="text-xs text-gray-400">Manage uploads</p>
+            </div>
+          </button>
+
+          <Link
             href="/api-docs"
             target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="flex items-center justify-center gap-3 p-4 bg-[#0c1f30] border border-white/10 rounded-lg hover:border-orange-500/50 hover:bg-[#0c1f30]/80 transition-all group"
           >
-            <Code className="w-8 h-8 text-blue-600 mr-4" />
-            <div>
-              <h4 className="font-semibold text-blue-900">API Documentation</h4>
-              <p className="text-sm text-blue-700">Complete API reference</p>
+            <div className="p-2 bg-purple-500/20 rounded-lg group-hover:bg-purple-500/30 transition-colors">
+              <FileText className="w-6 h-6 text-purple-400" />
             </div>
-          </a>
+            <div className="text-left">
+              <h4 className="font-semibold text-white text-sm">API Docs</h4>
+              <p className="text-xs text-gray-400">View Swagger UI</p>
+            </div>
+          </Link>
 
-          <a
+          <Link
             href="/api-testing"
             target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+            className="flex items-center justify-center gap-3 p-4 bg-[#0c1f30] border border-white/10 rounded-lg hover:border-orange-500/50 hover:bg-[#0c1f30]/80 transition-all group"
           >
-            <Play className="w-8 h-8 text-green-600 mr-4" />
-            <div>
-              <h4 className="font-semibold text-green-900">API Testing</h4>
-              <p className="text-sm text-green-700">Interactive testing playground</p>
+            <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
+              <Activity className="w-6 h-6 text-green-400" />
             </div>
-          </a>
+            <div className="text-left">
+              <h4 className="font-semibold text-white text-sm">API Testing</h4>
+              <p className="text-xs text-gray-400">Test Endpoints</p>
+            </div>
+          </Link>
         </div>
       </div>
 
       {/* WhatsApp Booking Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">WhatsApp Booking Settings</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-green-400" />
+          WhatsApp Booking Settings
+        </h3>
+        <p className="text-gray-300 mb-6">
           Configure WhatsApp number for direct booking. When customers click "Book Now", they will be redirected to WhatsApp with pre-filled package information.
         </p>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               WhatsApp Number
             </label>
             <div className="flex items-center space-x-2">
-              <span className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900">
+              <span className="px-3 py-3 bg-[#0c1f30] border border-white/10 rounded-lg text-gray-300">
                 +62
               </span>
               <input
                 type="tel"
                 value={formData.whatsappNumber || ''}
                 onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+                className="flex-1 p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
                 placeholder="e.g., 81234567890"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Enter phone number without +62 or 0. Example: 81234567890
             </p>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Greeting Message (Optional)
             </label>
             <textarea
               value={formData.whatsappGreeting || ''}
               onChange={(e) => setFormData({ ...formData, whatsappGreeting: e.target.value })}
               rows={3}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., Halo Bromo Ijen Tour! 👋"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Customize the greeting message (default: "Halo Bromo Ijen Tour! 👋")
             </p>
           </div>
@@ -972,61 +1012,64 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* Provider Details */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Provider Details</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-blue-400" />
+          Provider Details
+        </h3>
+        <p className="text-gray-300 mb-6">
           Configure your tour provider information displayed on package detail pages.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Provider Name
             </label>
             <input
               type="text"
               value={formData.providerName || ''}
               onChange={(e) => setFormData({ ...formData, providerName: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., Bromo Ijen Tour"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Member Since
             </label>
             <input
               type="text"
               value={formData.memberSince || ''}
               onChange={(e) => setFormData({ ...formData, memberSince: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., 14 May 2024"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Provider Phone
             </label>
             <input
               type="text"
               value={formData.providerPhone || ''}
               onChange={(e) => setFormData({ ...formData, providerPhone: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., +62 812-3456-7890"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Provider Email
             </label>
             <input
               type="email"
               value={formData.providerEmail || ''}
               onChange={(e) => setFormData({ ...formData, providerEmail: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., info@bromotour.com"
             />
           </div>
@@ -1034,47 +1077,50 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* General Settings - Logo & Site Name */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🏢 General Settings</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Layout className="w-5 h-5 text-purple-400" />
+          General Settings
+        </h3>
+        <p className="text-gray-300 mb-6">
           Configure your site logo and basic branding. These settings will be displayed in the header navigation across all pages.
         </p>
         
         <div className="space-y-6">
           {/* Site Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Site Name / Brand Name
             </label>
             <input
               type="text"
               value={formData.brandName || formData.siteName || ''}
               onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., Bromo Ijen Tours"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               This will appear in the header next to your logo
             </p>
           </div>
 
           {/* Logo Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Site Logo
             </label>
             <div className="flex items-start gap-4">
               {/* Logo Preview */}
               {formData.siteLogo && (
                 <div className="flex-shrink-0">
-                  <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <div className="w-32 h-32 border border-white/10 rounded-lg overflow-hidden bg-[#0c1f30] flex items-center justify-center">
                     <img 
                       src={formData.siteLogo} 
                       alt="Site Logo" 
                       className="max-w-full max-h-full object-contain"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 text-center">Current Logo</p>
+                  <p className="text-xs text-gray-400 mt-1 text-center">Current Logo</p>
                 </div>
               )}
               
@@ -1084,10 +1130,10 @@ const CMSDashboardPage = () => {
                   type="text"
                   value={formData.siteLogo || ''}
                   onChange={(e) => setFormData({ ...formData, siteLogo: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
-                  placeholder="/uploads/logo.png"
+                  className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white font-mono text-sm placeholder-gray-500"
+                  placeholder="/og-default.jpg"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Enter logo URL or use Media Manager to upload
                 </p>
                 
@@ -1096,15 +1142,15 @@ const CMSDashboardPage = () => {
                     setCurrentImageField('siteLogo');
                     setShowMediaManager(true);
                   }}
-                  className="mt-3 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center gap-2"
+                  className="mt-3 px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium flex items-center gap-2"
                 >
                   <Camera className="w-4 h-4" />
                   Browse Media Library
                 </button>
               </div>
             </div>
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-800">
+            <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/20 rounded-lg">
+              <p className="text-xs text-blue-200">
                 <strong>💡 Recommended:</strong> PNG format with transparent background, 200x60px or similar aspect ratio (max height: 60px in header)
               </p>
             </div>
@@ -1112,37 +1158,37 @@ const CMSDashboardPage = () => {
 
           {/* Tagline */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Site Tagline (Optional)
             </label>
             <input
               type="text"
               value={formData.siteTagline || ''}
               onChange={(e) => setFormData({ ...formData, siteTagline: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="e.g., Your Adventure Starts Here"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Short tagline displayed below logo (optional)
             </p>
           </div>
 
           {/* Favicon */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Favicon (Browser Tab Icon)
             </label>
             <div className="flex items-start gap-4">
               {formData.favicon && (
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <div className="w-16 h-16 border border-white/10 rounded-lg overflow-hidden bg-[#0c1f30] flex items-center justify-center">
                     <img 
                       src={formData.favicon} 
                       alt="Favicon" 
                       className="max-w-full max-h-full object-contain"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 text-center">Favicon</p>
+                  <p className="text-xs text-gray-400 mt-1 text-center">Favicon</p>
                 </div>
               )}
               
@@ -1151,10 +1197,10 @@ const CMSDashboardPage = () => {
                   type="text"
                   value={formData.favicon || ''}
                   onChange={(e) => setFormData({ ...formData, favicon: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
+                  className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white font-mono text-sm placeholder-gray-500"
                   placeholder="/favicon.ico"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   32x32px or 16x16px .ico or .png file
                 </p>
               </div>
@@ -1164,67 +1210,70 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* SEO Default Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">SEO Default Settings</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Search className="w-5 h-5 text-yellow-400" />
+          SEO Default Settings
+        </h3>
+        <p className="text-gray-300 mb-6">
           Configure default SEO settings for your website. These will be used as fallback for pages without specific SEO data.
         </p>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Site Name
             </label>
             <input
               type="text"
               value={formData.siteName || ''}
               onChange={(e) => setFormData({ ...formData, siteName: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="Bromo Ijen Tour & Travel"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Site Description
             </label>
             <textarea
               value={formData.siteDescription || ''}
               onChange={(e) => setFormData({ ...formData, siteDescription: e.target.value })}
               rows={3}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="Experience the best of Mount Bromo and Ijen with professional tour packages"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Site URL
             </label>
             <input
               type="url"
               value={formData.siteUrl || ''}
               onChange={(e) => setFormData({ ...formData, siteUrl: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="https://bromoijen.com"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Your website's main URL (without trailing slash)
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Default OG Image
             </label>
             <input
               type="text"
               value={formData.defaultOgImage || ''}
               onChange={(e) => setFormData({ ...formData, defaultOgImage: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white placeholder-gray-500"
               placeholder="/og-default.jpg"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Default Open Graph image for social media sharing (1200x630px)
             </p>
           </div>
@@ -1232,56 +1281,139 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* Search Engine Verification */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🔍 Search Engine Verification</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-green-400" />
+          Search Engine Verification & Integration
+        </h3>
+        <p className="text-gray-300 mb-6">
           Add verification codes from Google Search Console and Bing Webmaster Tools. These meta tags will be automatically added to your homepage.
         </p>
         
+        <div className="mb-6 p-4 bg-green-900/20 border border-green-500/20 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="font-semibold text-green-300 text-sm mb-1">✅ Automatic Sitemap Submission</h4>
+              <p className="text-xs text-green-200/80">
+                Your sitemap is automatically pinged to Google Search Console and Bing Webmaster Tools when you regenerate it. 
+                No API key needed! Just verify your site ownership using the verification code below.
+              </p>
+            </div>
+          </div>
+        </div>
+        
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Google Search Console Verification Code
+            <label className="block text-sm font-medium text-gray-200 mb-2">
+              Google Search Console Verification
             </label>
-            <input
-              type="text"
-              value={formData.googleSiteVerification || ''}
-              onChange={(e) => setFormData({ ...formData, googleSiteVerification: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
-              placeholder="e.g., abc123xyz456..."
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              📋 Copy only the <strong>content</strong> value from GSC: <code className="bg-gray-100 px-1 rounded">&lt;meta name=&quot;google-site-verification&quot; content=&quot;<span className="text-orange-600">YOUR_CODE_HERE</span>&quot;&gt;</code>
-            </p>
+            
+            {/* Method Selection */}
+            <div className="mb-3 flex items-center space-x-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="googleVerificationMethod"
+                  value="meta"
+                  checked={formData.googleVerificationMethod !== 'file'}
+                  onChange={() => setFormData({ ...formData, googleVerificationMethod: 'meta' })}
+                  className="w-4 h-4 text-orange-500 border-white/10 bg-[#0c1f30] focus:ring-orange-500 focus:ring-offset-[#1a2e45]"
+                />
+                <span className="text-sm text-gray-300">HTML Tag (Meta Tag)</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="googleVerificationMethod"
+                  value="file"
+                  checked={formData.googleVerificationMethod === 'file'}
+                  onChange={() => setFormData({ ...formData, googleVerificationMethod: 'file' })}
+                  className="w-4 h-4 text-orange-500 border-white/10 bg-[#0c1f30] focus:ring-orange-500 focus:ring-offset-[#1a2e45]"
+                />
+                <span className="text-sm text-gray-300">HTML File Upload</span>
+              </label>
+            </div>
+
+            {/* Meta Tag Method */}
+            {formData.googleVerificationMethod !== 'file' && (
+              <div>
+                <input
+                  type="text"
+                  value={formData.googleSiteVerification || ''}
+                  onChange={(e) => setFormData({ ...formData, googleSiteVerification: e.target.value })}
+                  className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white font-mono text-sm placeholder-gray-500"
+                  placeholder="e.g., abc123xyz456..."
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  📋 Copy only the <strong>content</strong> value from GSC: <code className="bg-[#0c1f30] px-1 rounded border border-white/10">&lt;meta name=&quot;google-site-verification&quot; content=&quot;<span className="text-orange-400">YOUR_CODE_HERE</span>&quot;&gt;</code>
+                </p>
+              </div>
+            )}
+
+            {/* File Upload Method */}
+            {formData.googleVerificationMethod === 'file' && (
+              <div>
+                <input
+                  type="text"
+                  value={formData.googleSiteVerification || ''}
+                  onChange={(e) => setFormData({ ...formData, googleSiteVerification: e.target.value })}
+                  className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white font-mono text-sm mb-2 placeholder-gray-500"
+                  placeholder="e.g., google1234567890abcdef.html"
+                />
+                <p className="text-xs text-gray-400 mb-2">
+                  📋 Enter the <strong>filename</strong> from Google Search Console (e.g., <code className="bg-[#0c1f30] px-1 rounded border border-white/10">google1234567890abcdef.html</code>)
+                </p>
+                <div className="p-3 bg-blue-900/20 border border-blue-500/20 rounded-lg">
+                  <p className="text-xs text-blue-200 mb-2">
+                    <strong>📝 Instructions:</strong>
+                  </p>
+                  <ol className="text-xs text-blue-200/80 space-y-1 list-decimal list-inside">
+                    <li>In Google Search Console, select "HTML file upload" method</li>
+                    <li>Copy the filename (e.g., <code className="bg-blue-500/20 px-1 rounded">google1234567890abcdef.html</code>)</li>
+                    <li>Paste it above and save</li>
+                    <li>The verification file will be automatically created at <code className="bg-blue-500/20 px-1 rounded">/google1234567890abcdef.html</code></li>
+                  </ol>
+                </div>
+                {formData.googleSiteVerification && formData.googleSiteVerification.endsWith('.html') && (
+                  <div className="mt-2 p-2 bg-green-900/20 border border-green-500/20 rounded-lg">
+                    <p className="text-xs text-green-300">
+                      ✅ Verification file will be available at: <a href={`/${formData.googleSiteVerification}`} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline font-mono">{formData.googleSiteVerification}</a>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <a 
               href="https://search.google.com/search-console" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:text-blue-700 mt-2 inline-block"
+              className="text-xs text-blue-400 hover:text-blue-300 mt-2 inline-block"
             >
               → Open Google Search Console
             </a>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-medium text-gray-200 mb-2">
               Bing Webmaster Tools Verification Code
             </label>
             <input
               type="text"
               value={formData.bingSiteVerification || ''}
               onChange={(e) => setFormData({ ...formData, bingSiteVerification: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
+              className="w-full p-3 bg-[#0c1f30] border border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-white font-mono text-sm placeholder-gray-500"
               placeholder="e.g., ABC123XYZ456..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              📋 Copy only the <strong>content</strong> value from Bing: <code className="bg-gray-100 px-1 rounded">&lt;meta name=&quot;msvalidate.01&quot; content=&quot;<span className="text-orange-600">YOUR_CODE_HERE</span>&quot;&gt;</code>
+            <p className="text-xs text-gray-400 mt-1">
+              📋 Copy only the <strong>content</strong> value from Bing: <code className="bg-[#0c1f30] px-1 rounded border border-white/10">&lt;meta name=&quot;msvalidate.01&quot; content=&quot;<span className="text-orange-400">YOUR_CODE_HERE</span>&quot;&gt;</code>
             </p>
             <a 
               href="https://www.bing.com/webmasters" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:text-blue-700 mt-2 inline-block"
+              className="text-xs text-blue-400 hover:text-blue-300 mt-2 inline-block"
             >
               → Open Bing Webmaster Tools
             </a>
@@ -1290,9 +1422,12 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* Template Selection */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🎨 Template Selection</h3>
-        <p className="text-gray-600 mb-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Layout className="w-5 h-5 text-pink-400" />
+          Template Selection
+        </h3>
+        <p className="text-gray-300 mb-6">
           Choose which template design to use for your landing page. Template controls the layout and styling of sections.
         </p>
         
@@ -1301,15 +1436,17 @@ const CMSDashboardPage = () => {
           <div
             onClick={() => setFormData({ ...formData, activeTemplate: 'default' })}
             className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-              formData.activeTemplate === 'default' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+              formData.activeTemplate === 'default' 
+                ? 'border-orange-500 bg-orange-500/10' 
+                : 'border-white/10 bg-[#0c1f30] hover:border-white/30'
             }`}
           >
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">D</span>
               </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Default Template</h4>
-              <p className="text-sm text-gray-600">Modern, clean design with card-based layouts</p>
+              <h4 className="font-semibold text-white mb-2">Default Template</h4>
+              <p className="text-sm text-gray-400">Modern, clean design with card-based layouts</p>
             </div>
           </div>
 
@@ -1317,15 +1454,17 @@ const CMSDashboardPage = () => {
           <div
             onClick={() => setFormData({ ...formData, activeTemplate: 'gotur' })}
             className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-              formData.activeTemplate === 'gotur' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+              formData.activeTemplate === 'gotur' 
+                ? 'border-orange-500 bg-orange-500/10' 
+                : 'border-white/10 bg-[#0c1f30] hover:border-white/30'
             }`}
           >
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">G</span>
               </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Gotur Template</h4>
-              <p className="text-sm text-gray-600">Professional travel agency template</p>
+              <h4 className="font-semibold text-white mb-2">Gotur Template</h4>
+              <p className="text-sm text-gray-400">Professional travel agency template</p>
             </div>
           </div>
 
@@ -1333,22 +1472,24 @@ const CMSDashboardPage = () => {
           <div
             onClick={() => setFormData({ ...formData, activeTemplate: 'custom' })}
             className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-              formData.activeTemplate === 'custom' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+              formData.activeTemplate === 'custom' 
+                ? 'border-orange-500 bg-orange-500/10' 
+                : 'border-white/10 bg-[#0c1f30] hover:border-white/30'
             }`}
           >
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">C</span>
               </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Custom Template</h4>
-              <p className="text-sm text-gray-600">Fully customized design (Coming Soon)</p>
+              <h4 className="font-semibold text-white mb-2">Custom Template</h4>
+              <p className="text-sm text-gray-400">Fully customized design (Coming Soon)</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Save All Settings Button */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
         <button
           onClick={async () => {
             try {
@@ -1366,42 +1507,42 @@ const CMSDashboardPage = () => {
               showToast('error', '❌ Failed to save settings!');
             }
           }}
-          className="w-full px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-lg"
+          className="w-full px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-lg shadow-lg shadow-orange-900/20"
         >
           💾 Save All Settings
         </button>
       </div>
 
       {/* System Settings */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">System Settings</h3>
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">System Settings</h3>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 bg-[#0c1f30] rounded-lg border border-white/5">
             <div>
-              <h4 className="font-medium text-gray-900">Site Maintenance Mode</h4>
-              <p className="text-sm text-gray-600">Enable maintenance mode to temporarily disable the site</p>
+              <h4 className="font-medium text-white">Site Maintenance Mode</h4>
+              <p className="text-sm text-gray-400">Enable maintenance mode to temporarily disable the site</p>
             </div>
-            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-[#1a2e45]">
               <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1" />
             </button>
           </div>
           
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 bg-[#0c1f30] rounded-lg border border-white/5">
             <div>
-              <h4 className="font-medium text-gray-900">Auto-approve Testimonials</h4>
-              <p className="text-sm text-gray-600">Automatically approve new testimonials</p>
+              <h4 className="font-medium text-white">Auto-approve Testimonials</h4>
+              <p className="text-sm text-gray-400">Automatically approve new testimonials</p>
             </div>
-            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-[#1a2e45]">
               <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6" />
             </button>
           </div>
           
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 bg-[#0c1f30] rounded-lg border border-white/5">
             <div>
-              <h4 className="font-medium text-gray-900">Email Notifications</h4>
-              <p className="text-sm text-gray-600">Send email notifications for new bookings</p>
+              <h4 className="font-medium text-white">Email Notifications</h4>
+              <p className="text-sm text-gray-400">Send email notifications for new bookings</p>
             </div>
-            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+            <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-[#1a2e45]">
               <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6" />
             </button>
           </div>
@@ -1409,10 +1550,10 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* Backup & Export */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">💾 Complete Backup System</h3>
-        <p className="text-gray-600 mb-6">
-          Create a complete backup file (<code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">.mswbak</code>) containing database, content, and all uploaded files. 
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">💾 Complete Backup System</h3>
+        <p className="text-gray-300 mb-6">
+          Create a complete backup file (<code className="bg-[#0c1f30] px-2 py-1 rounded text-sm font-mono text-orange-400">.mswbak</code>) containing database, content, and all uploaded files. 
           Perfect for site migration or disaster recovery.
         </p>
         
@@ -1451,14 +1592,88 @@ const CMSDashboardPage = () => {
             </div>
           </button>
         </div>
+
+        {/* Restore Backup Section */}
+        <div className="mb-6 p-4 border-2 border-dashed border-white/10 rounded-lg bg-[#0c1f30] hover:bg-[#0c1f30]/80 transition-colors">
+          <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
+            <Upload className="w-5 h-5 text-gray-400" />
+            Restore from Backup
+          </h4>
+          <p className="text-sm text-gray-400 mb-4">
+            Upload a .mswbak file to restore the entire system (Database + Files).
+            <br />
+            <span className="text-red-400 font-medium">⚠️ Warning: This will overwrite current data!</span>
+          </p>
+          
+          <div className="flex gap-3 items-center">
+            <input
+              type="file"
+              accept=".mswbak"
+              id="restore-file-input"
+              className="block w-full text-sm text-gray-400
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-900/30 file:text-blue-300
+                hover:file:bg-blue-900/50
+                cursor-pointer
+              "
+            />
+            <button
+              onClick={async () => {
+                const input = document.getElementById('restore-file-input') as HTMLInputElement;
+                if (!input.files || input.files.length === 0) {
+                  showToast('error', 'Please select a file first');
+                  return;
+                }
+                
+                const file = input.files[0];
+                
+                showConfirm(
+                  'Restore System?',
+                  `Are you sure you want to restore from ${file.name}? Current data will be overwritten!`,
+                  async () => {
+                    try {
+                      showToast('info', '⏳ Uploading and restoring... This may take a while.');
+                      
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      
+                      const response = await fetch('/api/backup/restore', {
+                        method: 'POST',
+                        body: formData
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (data.success) {
+                        showToast('success', '✅ System restored successfully!');
+                        setTimeout(() => window.location.reload(), 2000);
+                      } else {
+                        showToast('error', `❌ Restore failed: ${data.error}`);
+                      }
+                    } catch (error) {
+                      console.error('Restore error:', error);
+                      showToast('error', '❌ Failed to restore system');
+                    }
+                  },
+                  'danger'
+                );
+              }}
+              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium whitespace-nowrap shadow-sm border border-white/10"
+            >
+              Restore Backup
+            </button>
+          </div>
+        </div>
         
         {/* Backup Files List */}
-        <div className="border-t border-gray-200 pt-6">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center justify-between">
+        <div className="border-t border-white/10 pt-6">
+          <h4 className="font-semibold text-white mb-4 flex items-center justify-between">
             <span>📂 Existing Backups</span>
             <button
               onClick={fetchBackupList}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
@@ -1466,12 +1681,12 @@ const CMSDashboardPage = () => {
           </h4>
           
           {loading ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-400">
               <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
               Loading backups...
             </div>
           ) : backupList.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-400">
               <FolderOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>No backups found</p>
               <p className="text-sm">Create your first backup above</p>
@@ -1481,15 +1696,15 @@ const CMSDashboardPage = () => {
               {backupList.map((backup: any) => (
                 <div
                   key={backup.name}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                  className="flex items-center justify-between p-4 bg-[#0c1f30] rounded-lg border border-white/10 hover:border-blue-500/50 hover:bg-blue-900/20 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <FolderOpen className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center">
+                      <FolderOpen className="w-5 h-5 text-blue-400" />
                     </div>
                     <div>
-                      <h5 className="font-mono text-sm font-semibold text-gray-900">{backup.name}</h5>
-                      <p className="text-xs text-gray-600">
+                      <h5 className="font-mono text-sm font-semibold text-white">{backup.name}</h5>
+                      <p className="text-xs text-gray-400">
                         {new Date(backup.createdAt).toLocaleString('id-ID', {
                           dateStyle: 'medium',
                           timeStyle: 'short'
@@ -1502,7 +1717,7 @@ const CMSDashboardPage = () => {
                     <a
                       href={backup.path}
                       download
-                      className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium flex items-center gap-1"
+                      className="px-3 py-2 bg-green-900/30 text-green-400 rounded-lg hover:bg-green-900/50 transition-colors text-sm font-medium flex items-center gap-1"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1537,7 +1752,7 @@ const CMSDashboardPage = () => {
                           'danger'
                         );
                       }}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                      className="px-3 py-2 bg-red-900/30 text-red-400 rounded-lg hover:bg-red-900/50 transition-colors text-sm font-medium"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1549,12 +1764,12 @@ const CMSDashboardPage = () => {
         </div>
         
         {/* Info Box */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
           <div className="flex items-start space-x-3">
-            <Bell className="w-5 h-5 text-blue-600 mt-0.5" />
+            <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-blue-900 text-sm mb-1">💡 What's included in .mswbak backup?</h4>
-              <ul className="text-xs text-blue-800 space-y-1">
+              <h4 className="font-semibold text-blue-200 text-sm mb-1">💡 What's included in .mswbak backup?</h4>
+              <ul className="text-xs text-blue-300 space-y-1">
                 <li>✅ <strong>database.sql</strong> - Complete MySQL database dump</li>
                 <li>✅ <strong>app-data.json</strong> - All content with translations (packages, blogs, etc)</li>
                 <li>✅ <strong>uploads/</strong> - All images and files from /public/uploads/</li>
@@ -1567,12 +1782,12 @@ const CMSDashboardPage = () => {
       </div>
 
       {/* API Endpoints Summary */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">API Endpoints Summary</h3>
+      <div className="bg-[#1a2e45] rounded-xl shadow-lg border border-white/10 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">API Endpoints Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-900 mb-2">Content Management</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
+          <div className="p-4 bg-[#0c1f30] rounded-lg border border-white/5">
+            <h4 className="font-semibold text-white mb-2">Content Management</h4>
+            <ul className="text-sm text-gray-400 space-y-1">
               <li>• /api/destinations</li>
               <li>• /api/packages</li>
               <li>• /api/blogs</li>
@@ -1580,9 +1795,9 @@ const CMSDashboardPage = () => {
             </ul>
           </div>
           
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-900 mb-2">User Interactions</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
+          <div className="p-4 bg-[#0c1f30] rounded-lg border border-white/5">
+            <h4 className="font-semibold text-white mb-2">User Interactions</h4>
+            <ul className="text-sm text-gray-400 space-y-1">
               <li>• /api/bookings</li>
               <li>• /api/contact</li>
               <li>• /api/newsletter</li>
@@ -1590,9 +1805,9 @@ const CMSDashboardPage = () => {
             </ul>
           </div>
           
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-900 mb-2">System Tools</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
+          <div className="p-4 bg-[#0c1f30] rounded-lg border border-white/5">
+            <h4 className="font-semibold text-white mb-2">System Tools</h4>
+            <ul className="text-sm text-gray-400 space-y-1">
               <li>• /api/search</li>
               <li>• /api/dashboard</li>
               <li>• /api/blogs/[id]</li>
@@ -1727,7 +1942,7 @@ const CMSDashboardPage = () => {
             ) : activeTab === 'users' ? (
               <UsersManager />
             ) : activeTab === 'seo' ? (
-              <SeoManager />
+              <SeoManagementList />
             ) : activeTab === 'templates' ? (
               <TemplatesManager />
             ) : activeTab === 'api-keys' ? (

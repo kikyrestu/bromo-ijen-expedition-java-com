@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       message: 'Database backup created successfully',
       filename: latestFile,
       size: fileSize,
-      path: `/backups/${latestFile}`,
+      path: `/api/backup/download?filename=${encodeURIComponent(latestFile)}`,
       output: stdout
     });
     

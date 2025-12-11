@@ -502,7 +502,7 @@ async function main() {
           price: 'From $25',
           description: 'Largest Hindu temple complex in Indonesia, a UNESCO World Heritage Site',
           highlights: ['Hindu Temple', 'UNESCO Site', 'Architecture', 'History'],
-          image: '/uploads/1760936110326-esaias-tan-gllwarlk_fs-unsplash.jpg',
+          image: '/uploads/wisata-candi-prambanan-tutup-ssaat-nyepi_169.jpeg',
           featured: true
         },
         {
@@ -781,11 +781,7 @@ async function main() {
           activities: ['Sarapan', 'Check-out', 'Perjalanan kembali ke Surabaya', 'Drop-off hotel/bandara']
         }
       ]),
-      gallery: JSON.stringify([
-        '/uploads/bromo-sunrise-1.jpg',
-        '/uploads/bromo-sunrise-2.jpg',
-        '/uploads/bromo-sunrise-3.jpg'
-      ]),
+      gallery: JSON.stringify([]),
       faqs: JSON.stringify([
         {
           question: 'Apakah aman untuk anak-anak?',
@@ -799,7 +795,7 @@ async function main() {
       groupSize: 'Small Group (2-6 people)',
       difficulty: 'Easy',
       bestFor: 'Everyone',
-      image: '/uploads/bromo-sunrise-package.jpg',
+      image: '/og-default.jpg',
       departure: 'Surabaya',
       return: 'Surabaya',
       totalPeople: 6,
@@ -860,11 +856,7 @@ async function main() {
           activities: ['Wake up call 01:00', 'Trekking ke Ijen', 'Blue fire viewing', 'Sunrise di puncak', 'Kembali ke homestay', 'Perjalanan kembali']
         }
       ]),
-      gallery: JSON.stringify([
-        '/uploads/ijen-blue-fire-1.jpg',
-        '/uploads/ijen-blue-fire-2.jpg',
-        '/uploads/ijen-blue-fire-3.jpg'
-      ]),
+      gallery: JSON.stringify([]),
       faqs: JSON.stringify([
         {
           question: 'Apakah blue fire selalu terlihat?',
@@ -878,7 +870,7 @@ async function main() {
       groupSize: 'Small Group (2-8 people)',
       difficulty: 'Moderate',
       bestFor: 'Adventure Seekers',
-      image: '/uploads/ijen-blue-fire-package.jpg',
+      image: '/og-default.jpg',
       departure: 'Surabaya',
       return: 'Surabaya',
       totalPeople: 8,
@@ -905,7 +897,7 @@ async function main() {
       readTime: '8 min read',
       category: 'Travel Guide',
       tags: JSON.stringify(['Bromo', 'Travel Guide', 'Tips', 'Fotografi']),
-      image: '/uploads/bromo-guide.jpg',
+      image: '/og-default.jpg',
       featured: true,
       status: 'published'
     }
@@ -940,7 +932,7 @@ async function main() {
       name: 'Sarah Johnson',
       role: 'Travel Blogger',
       content: 'Pengalaman yang luar biasa! Guide sangat profesional dan pemandangan Bromo benar-benar menakjubkan. Highly recommended!',
-      image: '/uploads/testimonial-sarah.jpg',
+      image: null,
       rating: 5,
       location: 'Australia',
       packageName: 'Bromo Sunrise Adventure',
@@ -957,7 +949,7 @@ async function main() {
       name: 'Michael Chen',
       role: 'Photographer',
       content: 'Blue fire di Ijen adalah pengalaman yang tidak akan pernah saya lupakan. Tour ini sangat terorganisir dan aman.',
-      image: '/uploads/testimonial-michael.jpg',
+      image: null,
       rating: 5,
       location: 'Singapore',
       packageName: 'Ijen Blue Fire Expedition',

@@ -3,61 +3,6 @@ import prisma from '@/lib/prisma';
 import { updateBlogLocalizedUrls } from '@/lib/localized-urls';
 import { getBlogTranslation } from '@/lib/auto-translate';
 
-// Mock blogs data
-const mockBlogs = [
-  {
-    id: '1',
-    slug: 'bromo-photography-guide',
-    title: 'Complete Guide to Bromo Photography',
-    excerpt: 'Master the art of capturing stunning sunrise photos at Mount Bromo with expert tips and techniques',
-    content: '<p>Learn how to capture the perfect Bromo sunrise shot with these professional photography tips...</p>',
-    author: 'Bromo Ijen Tour Team',
-    category: 'Photography',
-    tags: ['Bromo', 'Photography', 'Sunrise', 'Tips'],
-    readTime: '5 min read',
-    publishDate: '2025-01-15',
-    image: '/uploads/bromo-photography-guide.jpg',
-    status: 'published',
-    featured: true,
-    createdAt: new Date('2025-01-15'),
-    updatedAt: new Date('2025-01-15')
-  },
-  {
-    id: '2',
-    slug: 'ijen-hiking-tips',
-    title: 'Essential Hiking Tips for Mount Ijen',
-    excerpt: 'Everything you need to know before hiking to the blue fire crater',
-    content: '<p>Prepare for your Ijen adventure with these essential hiking tips and safety guidelines...</p>',
-    author: 'Bromo Ijen Tour Team',
-    category: 'Adventure',
-    tags: ['Ijen', 'Hiking', 'Blue Fire', 'Adventure'],
-    readTime: '7 min read',
-    publishDate: '2025-01-10',
-    image: '/uploads/ijen-hiking-tips.jpg',
-    status: 'published',
-    featured: false,
-    createdAt: new Date('2025-01-10'),
-    updatedAt: new Date('2025-01-10')
-  },
-  {
-    id: '3',
-    slug: 'budget-travel-guide',
-    title: 'Budget Travel Guide to Bromo Ijen',
-    excerpt: 'Discover how to explore Bromo and Ijen on a budget without compromising the experience',
-    content: '<p>Travel smart and save money with these budget-friendly tips for your Bromo Ijen adventure...</p>',
-    author: 'Bromo Ijen Tour Team',
-    category: 'Budget Travel',
-    tags: ['Budget', 'Tips', 'Travel Guide'],
-    readTime: '6 min read',
-    publishDate: '2025-01-05',
-    image: '/uploads/budget-travel-guide.jpg',
-    status: 'published',
-    featured: false,
-    createdAt: new Date('2025-01-05'),
-    updatedAt: new Date('2025-01-05')
-  }
-];
-
 // Helper: Generate slug from title
 function generateSlug(title: string): string {
   return title

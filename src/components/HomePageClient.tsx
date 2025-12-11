@@ -80,7 +80,7 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
         <link rel="canonical" href={canonicalUrl} />
         
         {/* Search Engine Verification */}
-        {settings?.googleSiteVerification && (
+        {settings?.googleSiteVerification && !settings.googleSiteVerification.endsWith('.html') && (
           <meta name="google-site-verification" content={settings.googleSiteVerification} />
         )}
         {settings?.bingSiteVerification && (
@@ -159,9 +159,6 @@ export default function HomePageClient({ lang }: HomePageClientProps) {
           )}
         </main>
         <Footer />
-        
-        {/* Translation Debug Panel - Shows section data & translation status */}
-        <TranslationDebugPanel />
       </div>
     </>
   );

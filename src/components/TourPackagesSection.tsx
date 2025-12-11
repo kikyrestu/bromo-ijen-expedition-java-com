@@ -1,14 +1,16 @@
 'use client';
 
-import { Calendar, Users, Clock, Star, CheckCircle, ArrowRight, Compass, Mountain, Loader2 } from 'lucide-react';
+import { Calendar, Users, Clock, Star, MapPin, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
 import AnimatedSection from './AnimatedSection';
 
 interface Package {
   id: string;
-  slug?: string; // SEO-friendly URL slug
+  slug?: string;
   name: string;
   price: string;
   priceUnit: string;
@@ -20,6 +22,7 @@ interface Package {
   highlights: string[];
   featured?: boolean;
   category?: string;
+  location?: string;
 }
 
 interface SectionContent {
@@ -34,7 +37,7 @@ interface SectionContent {
 
 interface TourPackagesSectionProps {
   overrideContent?: SectionContent;
-  publishedOnly?: boolean; // Force filter published only (for CMS preview)
+  publishedOnly?: boolean;
 }
 
 const TourPackagesSection = ({ overrideContent, publishedOnly = false }: TourPackagesSectionProps) => {
@@ -43,38 +46,22 @@ const TourPackagesSection = ({ overrideContent, publishedOnly = false }: TourPac
   const [sectionContent, setSectionContent] = useState<SectionContent>({});
   const [loading, setLoading] = useState(true);
 
-  const sanitizeHtml = (html: string) => {
-    if (!html) return '';
-    // remove script tags
-    let out = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
-    // remove on* attributes
-    out = out.replace(/ on\w+="[^"]*"/gi, '');
-    out = out.replace(/ on\w+='[^']*'/gi, '');
-    return out;
-  };
-
   useEffect(() => {
     fetchData();
   }, [currentLanguage]);
 
   const fetchData = async () => {
     try {
-      // Fetch packages from API
-      // If publishedOnly=true (CMS preview), only fetch published
-      // Otherwise, check if it's admin view to include all
       const isAdminView = !publishedOnly && typeof window !== 'undefined' && window.location.pathname.includes('/cms');
       const packagesUrl = `/api/packages${isAdminView ? '?includeAll=true' : ''}${currentLanguage !== 'id' ? `${isAdminView ? '&' : '?'}language=${currentLanguage}` : ''}`;
       const packagesRes = await fetch(packagesUrl);
       const packagesData = await packagesRes.json();
 
-      // Fetch section content
       const sectionRes = await fetch(`/api/sections?section=tourPackages&language=${currentLanguage}`);
       const sectionData = await sectionRes.json();
 
       if (packagesData.success) {
         let filteredPackages = packagesData.data;
-
-        // Apply filters from section content or override
         const content = overrideContent || sectionData.data;
         setSectionContent(content);
 
@@ -86,14 +73,12 @@ const TourPackagesSection = ({ overrideContent, publishedOnly = false }: TourPac
           filteredPackages = filteredPackages.filter((pkg: Package) => pkg.category === content.category);
         }
 
-        // Apply sorting
         if (content?.sortBy === 'rating') {
           filteredPackages.sort((a: Package, b: Package) => b.rating - a.rating);
         } else if (content?.sortBy === 'popular') {
           filteredPackages.sort((a: Package, b: Package) => parseInt(b.reviews) - parseInt(a.reviews));
         }
 
-        // Apply display count limit
         if (content?.displayCount && content.displayCount > 0) {
           filteredPackages = filteredPackages.slice(0, content.displayCount);
         }
@@ -109,138 +94,117 @@ const TourPackagesSection = ({ overrideContent, publishedOnly = false }: TourPac
 
   if (loading) {
     return (
-      <section id="packages" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading tour packages...</p>
-            </div>
-          </div>
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
         </div>
       </section>
     );
   }
 
   return (
-    <section id="packages" className="py-16 sm:py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Clean Header */}
-        <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-          <div className="text-center mb-12">
-            {/* Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-full mb-4">
-              <Compass className="w-4 h-4 text-orange-600" />
-              <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
-                {sectionContent?.subtitle || 'Tour Packages'}
-              </span>
-            </div>
-            
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+    <section className="py-16 md:py-20 bg-white relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-10">
+          <AnimatedSection animation="fadeInUp">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
               {sectionContent?.title || t('packages.title')}
             </h2>
-            
-            <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed mb-6">
-              {sectionContent?.description || 'Explore our carefully curated tour packages'}
-            </p>
-            
-            <Link href={currentLanguage === 'id' ? '/packages' : `/${currentLanguage}/packages`} className="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold text-sm">
-              View all tours
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
-          </div>
-        </AnimatedSection>
+            <div 
+              className="text-base md:text-lg text-slate-600 max-w-2xl [&>p]:mb-2 last:[&>p]:mb-0"
+              dangerouslySetInnerHTML={{ __html: sectionContent?.description || 'Discover our most popular adventures and create unforgettable memories.' }}
+            />
+          </AnimatedSection>
 
-        {/* Packages Grid 2x2 - Modern Card Design */}
-        <AnimatedSection animation="fadeInUp" delay={0.4} duration={0.8}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {packages.map((pkg) => (
-            <Link key={pkg.id} href={`/${currentLanguage === 'id' ? '' : currentLanguage}/packages/${pkg.slug || pkg.id}`} className="group block">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
-                {/* Image Full Width */}
-                <div className="relative h-64 overflow-hidden bg-gray-100">
-                  {pkg.image ? (
-                    <img
+          <AnimatedSection animation="fadeInLeft" delay={0.2}>
+            <Link 
+              href={currentLanguage === 'id' ? '/packages' : `/${currentLanguage}/packages`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white text-slate-900 font-medium hover:bg-slate-50 transition-colors text-sm"
+            >
+              View all packages
+            </Link>
+          </AnimatedSection>
+        </div>
+
+        {/* Packages Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {packages.map((pkg, index) => (
+            <AnimatedSection
+              key={pkg.id}
+              animation="fadeInUp"
+              delay={index * 0.1}
+            >
+              <Link 
+                href={`${currentLanguage === 'id' ? '' : `/${currentLanguage}`}/packages/${pkg.slug || pkg.id}`}
+                className="group block h-full bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-slate-200 hover:shadow-xl transition-all duration-300"
+              >
+                {/* Image Container */}
+                <div className="relative h-64 overflow-hidden">
+                  <div className="absolute inset-0 bg-slate-100 animate-pulse" />
+                  {pkg.image && (
+                    <Image
                       src={pkg.image}
                       alt={pkg.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-700"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      unoptimized
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-600 rounded-lg mb-2 flex items-center justify-center mx-auto">
-                          <Mountain className="w-6 h-6 sm:w-8 sm:h-8 text-gray-300" />
-                        </div>
-                        <p className="text-xs">No Image</p>
-                      </div>
-                    </div>
                   )}
-
-                  {/* Heart Icon Top Right */}
-                  <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                  </button>
-
-                  {/* Play Icon Bottom Left */}
-                  <div className="absolute bottom-3 left-3 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <svg className="w-5 h-5 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
+                  
+                  {/* Top Badges */}
+                  <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                    <span className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-bold text-slate-900 shadow-sm uppercase tracking-wider">
+                      {pkg.category || 'TOUR'}
+                    </span>
+                    {pkg.featured && (
+                      <span className="px-3 py-1 rounded-full bg-orange-500 text-[10px] font-bold text-white shadow-sm uppercase tracking-wider">
+                        FEATURED
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-4">
-                  {/* Category Badge */}
-                  <div className="mb-2">
-                    <span className="text-xs font-semibold text-gray-500 uppercase">{pkg.category || 'TOUR'}</span>
-                  </div>
-                  
-                  {/* Title */}
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{pkg.name}</h3>
-
-                  {/* Location & Duration */}
-                  <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center space-x-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-xs">Location</span>
+                <div className="p-6">
+                  <div className="flex items-center gap-4 mb-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{pkg.duration}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-xs">{pkg.duration}</span>
+                    <div className="flex items-center gap-1.5">
+                      <Star className="w-3.5 h-3.5 fill-orange-400 text-orange-400" />
+                      <span className="font-bold text-slate-900">5.0</span>
+                      <span>({pkg.reviews})</span>
                     </div>
                   </div>
 
-                  {/* Description */}
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {pkg.description.replace(/<[^>]*>/g, '').substring(0, 80)}...
+                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
+                    {pkg.name}
+                  </h3>
+
+                  <p className="text-slate-600 text-sm line-clamp-2 mb-5 leading-relaxed">
+                    {pkg.description.replace(/<[^>]*>/g, '')}
                   </p>
 
-                  {/* Rating & Price */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      <span className="text-sm font-medium">5</span>
-                      <span className="text-xs text-gray-500">({pkg.reviews})</span>
+                  <div className="flex items-center justify-between pt-5 border-t border-slate-100">
+                    <div>
+                      <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mb-0.5">Starts from</div>
+                      <div className="text-lg font-bold text-slate-900">
+                        {pkg.price}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs text-gray-500">from</span>
-                      <div className="text-lg font-bold text-gray-900">{pkg.price}</div>
-                    </div>
+                    <span className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-all duration-300">
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
                   </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </AnimatedSection>
           ))}
         </div>
-        </AnimatedSection>
       </div>
     </section>
   );

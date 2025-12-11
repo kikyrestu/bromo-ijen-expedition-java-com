@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, Mail, ChevronDown, Globe } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Menu, X, Mail, ChevronDown, Globe, Phone, ArrowRight, MessageCircle } from 'lucide-react';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 
 type NormalizedNavItem = {
   id: string;
@@ -14,7 +16,7 @@ type NormalizedNavItem = {
   children: NormalizedNavItem[];
 };
 
-const DynamicHeader = () => {
+const DynamicHeader = ({ lang }: { lang?: string }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -22,6 +24,16 @@ const DynamicHeader = () => {
   const [brandSettings, setBrandSettings] = useState<any>(null);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const { currentLanguage, setLanguage, t } = useLanguage();
+  const { scrollY } = useScroll();
+  const pathname = usePathname();
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    if (latest > 50) {
+      setIsScrolled(true);
+    } else {
+      setIsScrolled(false);
+    }
+  });
 
   const languages = [
     { code: 'id', name: 'Bahasa Indonesia', flag: 'ID' },
@@ -72,30 +84,6 @@ const DynamicHeader = () => {
     fetchBrandSettings();
   }, []);
 
-  useEffect(() => {
-    const getHeroThreshold = () => {
-      const hero = document.querySelector('[data-hero-section]') as HTMLElement | null;
-      if (hero) {
-        return Math.max(hero.offsetHeight * 0.6, 160);
-      }
-      return 160;
-    };
-
-    const handleScroll = () => {
-      const threshold = getHeroThreshold();
-      setIsScrolled(window.scrollY > threshold);
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, []);
-
   const getLocalizedUrl = (path: string) => {
     if (currentLanguage === 'id') return path;
     return `/${currentLanguage}${path}`;
@@ -142,6 +130,11 @@ const DynamicHeader = () => {
   };
 
   const contactEmail = headerSettings?.contactEmail || brandSettings?.contactEmail || 'info@example.com';
+  const whatsappNumber = headerSettings?.whatsappNumber || brandSettings?.whatsappNumber || '';
+
+  const showWhatsApp = headerSettings?.showWhatsApp !== false;
+  const showEmail = headerSettings?.showEmail !== false;
+  const showLanguageSwitcher = headerSettings?.showLanguageSwitcher !== false;
 
   const normalizeNavItem = (item: any): NormalizedNavItem => {
     const rawTitle = getMenuTranslation(item, 'title') || 'Menu';
@@ -183,33 +176,6 @@ const DynamicHeader = () => {
   const topNavigation: NormalizedNavItem[] =
     menuItems.length > 0 ? normalizeMenuItems(menuItems) : fallbackNavItems;
 
-  const desktopLinkClass =
-    'flex items-center gap-1 text-gray-100 hover:text-white transition-colors ease-out duration-200 text-sm font-medium px-2.5 py-1.5 rounded-none border-b-2 border-transparent hover:border-white/70';
-
-  const renderNavChild = (node: NormalizedNavItem, onNavigate?: () => void) =>
-    node.isExternal ? (
-      <a
-        key={node.id}
-        href={node.url}
-        target={node.target || '_self'}
-        rel={node.target === '_blank' ? 'noopener noreferrer' : undefined}
-        className="block px-4 py-1.5 text-gray-100 hover:bg-white/10 rounded-lg text-sm whitespace-nowrap"
-        onClick={onNavigate}
-      >
-        {node.title}
-      </a>
-    ) : (
-      <Link
-        key={node.id}
-        href={node.url}
-        target={node.target && node.target !== '_self' ? node.target : undefined}
-        className="block px-4 py-1.5 text-gray-100 hover:bg-white/10 rounded-lg text-sm whitespace-nowrap"
-        onClick={onNavigate}
-      >
-        {node.title}
-      </Link>
-    );
-
   const handleNavigate = () => {
     setIsMenuOpen(false);
     setOpenDropdown(null);
@@ -221,216 +187,316 @@ const DynamicHeader = () => {
     : currentLanguage === 'id'
       ? 'Kontak'
       : 'Contact';
-  const contactMobileLabel = contactTranslation && contactTranslation !== 'nav.contact'
-    ? contactTranslation
-    : currentLanguage === 'id'
-      ? 'Hubungi kami'
-      : 'Contact us';
 
   return (
     <>
-      <header className={`fixed inset-x-0 top-0 z-50 px-4 sm:px-6 lg:px-8 transition-all ease-out duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-md' : 'bg-transparent'}`}>
-        <div
-          className={`max-w-7xl w-full mx-auto mt-0 overflow-visible px-6 sm:px-8 lg:px-12 transition-all duration-300`}
-        >
-          <div className="flex items-center justify-between h-16 sm:h-20">
-          <div className="flex items-center gap-3">
-              <Link href={getLocalizedUrl('/')} className="flex items-center gap-3">
-                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-900/70 shadow-lg">
-                  {brandSettings?.siteLogo || headerSettings?.logo ? (
-                    <img
-                      src={brandSettings?.siteLogo || headerSettings?.logo}
-                      alt={brandSettings?.brandName || headerSettings?.title || 'Logo'}
-                      className="w-9 h-9 object-contain rounded-full"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-lg">T</span>
-                  )}
-                </div>
-                <div className="hidden sm:flex flex-col leading-tight">
-                  <span className="text-base font-semibold text-white drop-shadow-md">{getHeaderTitle()}</span>
-                  <span className="text-[10px] text-gray-200/90 drop-shadow-sm">{getHeaderSubtitle()}</span>
-                </div>
-              </Link>
-            </div>
+      <motion.header
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-white/80 backdrop-blur-md shadow-lg py-2' 
+            : 'bg-transparent py-4'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            {/* Logo Section */}
+            <Link href={getLocalizedUrl('/')} className="flex items-center gap-3 group">
+              <div className={`relative flex items-center justify-center rounded-xl overflow-hidden transition-all duration-300 ${isScrolled ? 'w-8 h-8 sm:w-10 sm:h-10 shadow-md' : 'w-10 h-10 sm:w-12 sm:h-12 shadow-lg'}`}>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-teal-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+                {brandSettings?.siteLogo || headerSettings?.logo ? (
+                  <img
+                    src={brandSettings?.siteLogo || headerSettings?.logo}
+                    alt={brandSettings?.brandName || headerSettings?.title || 'Logo'}
+                    className="relative w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="relative text-white font-bold text-xl">T</span>
+                )}
+              </div>
+              <div className="hidden sm:flex flex-col">
+                <span className={`font-bold leading-none transition-all duration-300 ${isScrolled ? 'text-base text-gray-900' : 'text-lg text-white drop-shadow-md'}`}>
+                  {getHeaderTitle()}
+                </span>
+                <span className={`font-medium tracking-wide transition-all duration-300 ${isScrolled ? 'text-[10px] text-gray-500' : 'text-xs text-gray-200 drop-shadow-sm'}`}>
+                  {getHeaderSubtitle()}
+                </span>
+              </div>
+            </Link>
 
-            <nav className="hidden md:flex items-center gap-4 relative">
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-1">
               {topNavigation.map((item) => {
                 const hasChildren = item.children.length > 0;
                 const isOpen = openDropdown === item.id;
+                const isActive = pathname === item.url;
 
                 return (
                   <div
                     key={item.id}
-                    className="relative"
+                    className="relative group"
                     onMouseEnter={() => hasChildren && setOpenDropdown(item.id)}
                     onMouseLeave={() => hasChildren && setOpenDropdown(null)}
                   >
-                    {hasChildren ? (
-                      <button
-                        type="button"
-                        onClick={() => setOpenDropdown((prev) => (prev === item.id ? null : item.id))}
-                        className={desktopLinkClass}
-                      >
-                        {item.title}
-                        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                    ) : item.isExternal ? (
-                      <a
-                        href={item.url}
-                        target={item.target || '_self'}
-                        rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
-                        className={desktopLinkClass}
-                      >
-                        {item.title}
-                      </a>
-                    ) : (
-                      <Link
-                        href={item.url}
-                        target={item.target && item.target !== '_self' ? item.target : undefined}
-                        className={desktopLinkClass}
-                      >
-                        {item.title}
-                      </Link>
-                    )}
+                    <Link
+                      href={hasChildren ? '#' : item.url}
+                      onClick={(e) => {
+                        if (hasChildren) e.preventDefault();
+                        else handleNavigate();
+                      }}
+                      className={`
+                        flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300
+                        ${isScrolled 
+                          ? 'text-gray-700 hover:bg-gray-100 hover:text-blue-600' 
+                          : 'text-white/90 hover:bg-white/10 hover:text-white'
+                        }
+                        ${isActive && !isScrolled ? 'bg-white/10 text-white' : ''}
+                        ${isActive && isScrolled ? 'bg-blue-50 text-blue-600' : ''}
+                      `}
+                    >
+                      {item.title}
+                      {hasChildren && (
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                      )}
+                    </Link>
 
-                    {hasChildren && (
-                      <div
-                        className={`absolute left-0 top-full mt-1 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl py-2 min-w-[180px] transition-all ease-out duration-300 z-[9999] ${
-                          isOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
-                        }`}
-                      >
-                        {item.children.map((child) => renderNavChild(child))}
-                      </div>
-                    )}
+                    {/* Dropdown Menu */}
+                    <AnimatePresence>
+                      {hasChildren && isOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2"
+                        >
+                          {item.children.map((child) => (
+                            <Link
+                              key={child.id}
+                              href={child.url}
+                              target={child.target}
+                              className="flex items-center justify-between px-4 py-2.5 rounded-xl text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors group/item"
+                            >
+                              {child.title}
+                              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover/item:opacity-100 group-hover/item:translate-x-0 transition-all" />
+                            </Link>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
             </nav>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden lg:flex items-center space-x-2">
-                <Globe className="w-4 h-4 text-white/80" />
-                <select
-                  value={currentLanguage}
-                  onChange={(e) => setLanguage(e.target.value as Language)}
-                  className="rounded-md border border-white/30 bg-transparent px-3 py-1.5 text-xs font-medium text-white outline-none hover:border-white/50"
+            {/* Right Actions */}
+            <div className="flex items-center gap-3">
+              {/* Language Switcher */}
+              {showLanguageSwitcher && (
+                <div className="hidden lg:flex items-center">
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 ${
+                    isScrolled 
+                      ? 'border-gray-200 bg-gray-50 text-gray-700' 
+                      : 'border-white/20 bg-white/10 text-white backdrop-blur-sm'
+                  }`}>
+                    <Globe className="w-4 h-4" />
+                    <select
+                      value={currentLanguage}
+                      onChange={(e) => setLanguage(e.target.value as Language)}
+                      className="bg-transparent border-none outline-none text-xs font-medium cursor-pointer appearance-none pr-2"
+                    >
+                      {languages.map((lang) => (
+                        <option key={lang.code} value={lang.code} className="text-gray-900">
+                          {lang.code.toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* WhatsApp Button */}
+              {showWhatsApp && whatsappNumber && (
+                <a
+                  href={`https://wa.me/${whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`hidden sm:flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 ${
+                    isScrolled
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-white text-green-700 hover:bg-gray-100'
+                  }`}
                 >
-                  {languages.map((lang) => (
-                    <option key={lang.code} value={lang.code} className="text-gray-900">
-                      {lang.flag} {lang.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </a>
+              )}
 
-              <a
-                href={`mailto:${contactEmail}`}
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-md border border-white/30 text-xs sm:text-sm font-medium text-white transition-colors hover:border-white/60"
-                aria-label="Contact us"
-              >
-                <Mail className="w-4 h-4" />
-                <span>{contactLabel}</span>
-              </a>
+              {/* Contact Button */}
+              {showEmail && (
+                <a
+                  href={`mailto:${contactEmail}`}
+                  className={`hidden sm:flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 ${
+                    isScrolled
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-white text-blue-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>{contactLabel}</span>
+                </a>
+              )}
 
+              {/* Mobile Menu Button */}
               <button
-                type="button"
-                className="md:hidden p-2 rounded-md hover:bg-white/10"
-                onClick={() => {
-                  setIsMenuOpen((prev) => !prev);
-                  setOpenDropdown(null);
-                }}
-                aria-label="Toggle menu"
+                onClick={() => setIsMenuOpen(true)}
+                className={`md:hidden p-2 rounded-full transition-colors ${
+                  isScrolled ? 'text-gray-900 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+                }`}
               >
-                {isMenuOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+                <Menu className="w-6 h-6" />
               </button>
             </div>
           </div>
+        </div>
+      </motion.header>
 
-          <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden border-t border-white/20 bg-transparent rounded-b-none transition-all ease-in-out duration-300`}>
-            <div className="px-4 pt-4 pb-6 space-y-4">
-              <div className="flex flex-col gap-3">
-                {topNavigation.map((item) => {
-                  const hasChildren = item.children.length > 0;
-                  const isOpen = openDropdown === item.id;
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-2xl z-[70] overflow-y-auto"
+            >
+              <div className="p-6 space-y-8">
+                {/* Mobile Header */}
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-gray-900">{getHeaderTitle()}</span>
+                  <button
+                    onClick={() => setIsMenuOpen(false)}
+                    className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
 
-                  if (hasChildren) {
+                {/* Mobile Navigation */}
+                <div className="space-y-2">
+                  {topNavigation.map((item) => {
+                    const hasChildren = item.children.length > 0;
+                    const isOpen = openDropdown === item.id;
+
                     return (
-                      <div key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => setOpenDropdown((prev) => (prev === item.id ? null : item.id))}
-                          className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
-                        >
-                          {item.title}
-                          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {isOpen && (
-                          <div className="ml-4 mt-2 space-y-2">
-                            {item.children.map((child) =>
-                              renderNavChild(child, handleNavigate)
-                            )}
-                          </div>
+                      <div key={item.id} className="space-y-2">
+                        {hasChildren ? (
+                          <button
+                            onClick={() => setOpenDropdown(isOpen ? null : item.id)}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                          >
+                            {item.title}
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                        ) : (
+                          <Link
+                            href={item.url}
+                            onClick={handleNavigate}
+                            className="block px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                          >
+                            {item.title}
+                          </Link>
                         )}
+
+                        <AnimatePresence>
+                          {hasChildren && isOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pl-4 pr-2 space-y-1 pb-2">
+                                {item.children.map((child) => (
+                                  <Link
+                                    key={child.id}
+                                    href={child.url}
+                                    onClick={handleNavigate}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                  >
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                                    {child.title}
+                                  </Link>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
-                  }
+                  })}
+                </div>
 
-                  return item.isExternal ? (
+                {/* Mobile Footer Actions */}
+                <div className="pt-6 border-t border-gray-100 space-y-4">
+                  {showLanguageSwitcher && (
+                    <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Globe className="w-5 h-5" />
+                        <span className="text-sm font-medium">Language</span>
+                      </div>
+                      <select
+                        value={currentLanguage}
+                        onChange={(e) => setLanguage(e.target.value as Language)}
+                        className="bg-transparent font-semibold text-blue-600 outline-none"
+                      >
+                        {languages.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {showWhatsApp && whatsappNumber && (
                     <a
-                      key={item.id}
-                      href={item.url}
-                      target={item.target || '_self'}
-                      rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
-                      onClick={handleNavigate}
+                      href={`https://wa.me/${whatsappNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-green-600 text-white font-semibold shadow-lg shadow-green-200 hover:bg-green-700 transition-colors"
                     >
-                      {item.title}
+                      <MessageCircle className="w-5 h-5" />
+                      WhatsApp
                     </a>
-                  ) : (
-                    <Link
-                      key={item.id}
-                      href={item.url}
-                      target={item.target && item.target !== '_self' ? item.target : undefined}
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
-                      onClick={handleNavigate}
-                    >
-                      {item.title}
-                    </Link>
-                  );
-                })}
-              </div>
+                  )}
 
-              <div className="rounded-md border border-white/20 bg-transparent px-3 py-3">
-                <div className="flex items-center space-x-2">
-                  <Globe className="w-4 h-4 text-white/80" />
-                  <select
-                    value={currentLanguage}
-                    onChange={(e) => setLanguage(e.target.value as Language)}
-                    className="w-full rounded-md border border-white/30 bg-transparent px-3 py-2 font-medium text-white transition-all duration-300 focus:outline-none"
-                  >
-                    {languages.map((lang) => (
-                      <option key={lang.code} value={lang.code} className="text-gray-900">
-                        {lang.flag} {lang.name}
-                      </option>
-                    ))}
-                  </select>
+                  {showEmail && (
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
+                    >
+                      <Mail className="w-5 h-5" />
+                      {contactLabel}
+                    </a>
+                  )}
                 </div>
               </div>
-
-              <div className="pt-2 border-t border-white/10">
-                <a
-                  href={`mailto:${contactEmail}`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white hover:bg-white/10"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>{contactMobileLabel}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 };

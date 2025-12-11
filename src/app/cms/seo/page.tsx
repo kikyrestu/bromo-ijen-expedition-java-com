@@ -10,18 +10,72 @@ import {
   FileText,
   RefreshCw,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  List,
+  BarChart3
 } from 'lucide-react';
+import SeoManagementList from '@/components/cms/SeoManagementList';
 
 const SeoManagementPage = () => {
+  const [activeView, setActiveView] = useState<'dashboard' | 'list'>('list');
   const [analysis, setAnalysis] = useState<any>(null);
   const [sitemapStatus, setSitemapStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
+  const [verificationSettings, setVerificationSettings] = useState({
+    googleSiteVerification: '',
+    bingSiteVerification: '',
+    googleVerificationMethod: 'meta' as 'meta' | 'file'
+  });
+  const [savingVerification, setSavingVerification] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchVerificationSettings();
   }, []);
+
+  const fetchVerificationSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setVerificationSettings({
+          googleSiteVerification: data.data.googleSiteVerification || '',
+          bingSiteVerification: data.data.bingSiteVerification || '',
+          googleVerificationMethod: data.data.googleSiteVerification?.endsWith('.html') ? 'file' : 'meta'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching verification settings:', error);
+    }
+  };
+
+  const handleSaveVerification = async () => {
+    setSavingVerification(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          googleSiteVerification: verificationSettings.googleSiteVerification,
+          bingSiteVerification: verificationSettings.bingSiteVerification,
+          googleVerificationMethod: verificationSettings.googleVerificationMethod
+        })
+      });
+      
+      if (res.ok) {
+        alert('✅ Verifikasi berhasil disimpan!');
+        fetchVerificationSettings();
+      } else {
+        alert('❌ Gagal menyimpan verifikasi!');
+      }
+    } catch (error) {
+      console.error('Error saving verification:', error);
+      alert('❌ Error menyimpan verifikasi!');
+    } finally {
+      setSavingVerification(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -97,9 +151,46 @@ const SeoManagementPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">SEO Management Dashboard</h1>
-          <p className="text-gray-600">Monitor and optimize your website's search engine performance</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">SEO Management</h1>
+              <p className="text-gray-600">Monitor and optimize your website's search engine performance</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setActiveView('dashboard')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  activeView === 'dashboard'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Dashboard</span>
+              </button>
+              <button
+                onClick={() => setActiveView('list')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  activeView === 'list'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                <span>Content Management</span>
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* Content Management View */}
+        {activeView === 'list' && (
+          <SeoManagementList onRefresh={fetchData} />
+        )}
+
+        {/* Dashboard View */}
+        {activeView === 'dashboard' && (
+          <>
 
         {/* SEO Score Card */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -228,6 +319,157 @@ const SeoManagementPage = () => {
           </div>
         </div>
 
+        {/* Search Engine Verification */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="flex items-center space-x-3 mb-6">
+            <CheckCircle className="w-6 h-6 text-orange-600" />
+            <h2 className="text-xl font-bold text-gray-900">Search Engine Verification</h2>
+          </div>
+          <p className="text-gray-600 mb-6">
+            Verifikasi ownership website lu di Google Search Console dan Bing Webmaster Tools. Setelah verifikasi, sitemap bakal otomatis di-submit ke search engine.
+          </p>
+
+          <div className="space-y-6">
+            {/* Google Search Console */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                Google Search Console Verification
+              </label>
+              
+              {/* Method Selection */}
+              <div className="mb-4 flex items-center space-x-4">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="googleVerificationMethod"
+                    value="meta"
+                    checked={verificationSettings.googleVerificationMethod !== 'file'}
+                    onChange={() => setVerificationSettings({ ...verificationSettings, googleVerificationMethod: 'meta' })}
+                    className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">HTML Tag (Meta Tag)</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="googleVerificationMethod"
+                    value="file"
+                    checked={verificationSettings.googleVerificationMethod === 'file'}
+                    onChange={() => setVerificationSettings({ ...verificationSettings, googleVerificationMethod: 'file' })}
+                    className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">HTML File Upload</span>
+                </label>
+              </div>
+
+              {/* Meta Tag Method */}
+              {verificationSettings.googleVerificationMethod !== 'file' && (
+                <div>
+                  <input
+                    type="text"
+                    value={verificationSettings.googleSiteVerification}
+                    onChange={(e) => setVerificationSettings({ ...verificationSettings, googleSiteVerification: e.target.value })}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
+                    placeholder="e.g., abc123xyz456..."
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    📋 Copy hanya <strong>content</strong> dari GSC: <code className="bg-gray-100 px-1 rounded">&lt;meta name=&quot;google-site-verification&quot; content=&quot;<span className="text-orange-600">YOUR_CODE_HERE</span>&quot;&gt;</code>
+                  </p>
+                </div>
+              )}
+
+              {/* File Upload Method */}
+              {verificationSettings.googleVerificationMethod === 'file' && (
+                <div>
+                  <input
+                    type="text"
+                    value={verificationSettings.googleSiteVerification}
+                    onChange={(e) => setVerificationSettings({ ...verificationSettings, googleSiteVerification: e.target.value })}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm mb-2"
+                    placeholder="e.g., google1234567890abcdef.html"
+                  />
+                  <p className="text-xs text-gray-500 mb-3">
+                    📋 Masukkan <strong>filename</strong> dari Google Search Console (contoh: <code className="bg-gray-100 px-1 rounded">google1234567890abcdef.html</code>)
+                  </p>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
+                    <p className="text-xs text-blue-800 mb-2">
+                      <strong>📝 Cara Upload:</strong>
+                    </p>
+                    <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                      <li>Di Google Search Console, pilih metode "HTML file upload"</li>
+                      <li>Copy filename (contoh: <code className="bg-blue-100 px-1 rounded">google1234567890abcdef.html</code>)</li>
+                      <li>Paste di atas dan klik Save</li>
+                      <li>File verifikasi bakal otomatis dibuat di <code className="bg-blue-100 px-1 rounded">/google1234567890abcdef.html</code></li>
+                    </ol>
+                  </div>
+                  {verificationSettings.googleSiteVerification && verificationSettings.googleSiteVerification.endsWith('.html') && (
+                    <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-xs text-green-800">
+                        ✅ File verifikasi bakal tersedia di: <a href={`/${verificationSettings.googleSiteVerification}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-mono">{verificationSettings.googleSiteVerification}</a>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <a 
+                href="https://search.google.com/search-console" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-700 mt-2 inline-block"
+              >
+                → Buka Google Search Console
+              </a>
+            </div>
+
+            {/* Bing Webmaster Tools */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                Bing Webmaster Tools Verification Code
+              </label>
+              <input
+                type="text"
+                value={verificationSettings.bingSiteVerification}
+                onChange={(e) => setVerificationSettings({ ...verificationSettings, bingSiteVerification: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 font-mono text-sm"
+                placeholder="e.g., ABC123XYZ456..."
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                📋 Copy hanya <strong>content</strong> dari Bing: <code className="bg-gray-100 px-1 rounded">&lt;meta name=&quot;msvalidate.01&quot; content=&quot;<span className="text-orange-600">YOUR_CODE_HERE</span>&quot;&gt;</code>
+              </p>
+              <a 
+                href="https://www.bing.com/webmasters" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-700 mt-2 inline-block"
+              >
+                → Buka Bing Webmaster Tools
+              </a>
+            </div>
+
+            {/* Save Button */}
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                onClick={handleSaveVerification}
+                disabled={savingVerification}
+                className="flex items-center space-x-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 transition-colors font-medium"
+              >
+                {savingVerification ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Menyimpan...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Save Verification Settings</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Duplicate Content Alerts */}
         {(analysis?.duplicates?.titles?.length > 0 || analysis?.duplicates?.descriptions?.length > 0) && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
@@ -307,6 +549,8 @@ const SeoManagementPage = () => {
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

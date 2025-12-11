@@ -18,7 +18,8 @@ import {
   Save,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Layout
 } from 'lucide-react';
 import Toast from './Toast';
 import ConfirmDialog from './ConfirmDialog';
@@ -93,7 +94,7 @@ interface LanguageSettings {
 }
 
 const NavigationManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'menus' | 'topbar' | 'mobile' | 'language'>('menus');
+  const [activeTab, setActiveTab] = useState<'menus' | 'header' | 'topbar' | 'mobile' | 'language'>('menus');
   const [menus, setMenus] = useState<NavigationMenu[]>([]);
   const [settings, setSettings] = useState<{
     topbar?: TopbarSettings;
@@ -162,6 +163,16 @@ const NavigationManager: React.FC = () => {
     fontWeight: '',
     parentId: null,
     translations: []
+  });
+
+  const [headerForm, setHeaderForm] = useState({
+    showWhatsApp: true,
+    showEmail: true,
+    showLanguageSwitcher: true,
+    title: '',
+    subtitle: '',
+    whatsappNumber: '',
+    enableMultiLanguage: true
   });
 
   const [topbarForm, setTopbarForm] = useState({
@@ -323,6 +334,33 @@ const NavigationManager: React.FC = () => {
         if (menusData.success) {
           const menusArray = Array.isArray(menusData.data) ? menusData.data : [];
           setMenus(menusArray);
+        }
+      }
+
+      // Fetch header settings
+      const headerResponse = await fetch('/api/sections?section=header');
+      const headerData = await headerResponse.json();
+      if (headerData.success && headerData.data) {
+        setHeaderForm({
+          showWhatsApp: headerData.data.showWhatsApp !== false,
+          showEmail: headerData.data.showEmail !== false,
+          showLanguageSwitcher: headerData.data.showLanguageSwitcher !== false,
+          title: headerData.data.title || '',
+          subtitle: headerData.data.subtitle || '',
+          whatsappNumber: headerData.data.whatsappNumber || '',
+          enableMultiLanguage: true // Default value
+        });
+
+        // Fetch routing settings
+        try {
+          const routingRes = await fetch('/api/settings/routing');
+          const routingData = await routingRes.json();
+          setHeaderForm(prev => ({
+            ...prev,
+            enableMultiLanguage: routingData.enableMultiLanguage !== false
+          }));
+        } catch (e) {
+          console.error('Failed to fetch routing settings', e);
         }
       }
 
@@ -494,9 +532,38 @@ const NavigationManager: React.FC = () => {
     );
   };
 
-  const handleSaveSettings = async (type: 'topbar' | 'mobile' | 'language') => {
+  const handleSaveSettings = async (type: 'header' | 'topbar' | 'mobile' | 'language') => {
     try {
       let data: any;
+      
+      if (type === 'header') {
+        const response = await fetch('/api/sections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            section: 'header',
+            data: headerForm
+          })
+        });
+
+        // Save routing settings
+        await fetch('/api/settings/routing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            enableMultiLanguage: headerForm.enableMultiLanguage
+          })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          await fetchData();
+          showToast('success', 'Header settings saved successfully!');
+        } else {
+          showToast('error', 'Error saving header settings');
+        }
+        return;
+      }
       
       switch (type) {
         case 'topbar':
@@ -709,6 +776,7 @@ const NavigationManager: React.FC = () => {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: 'menus', label: 'Menu Management', icon: Menu },
+            { id: 'header', label: 'Header Settings', icon: Layout },
             { id: 'topbar', label: 'Topbar Settings', icon: Monitor },
             { id: 'mobile', label: 'Mobile Menu', icon: Smartphone },
             { id: 'language', label: 'Language Settings', icon: Globe }
@@ -730,6 +798,129 @@ const NavigationManager: React.FC = () => {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'header' && (
+        <div className="max-w-2xl space-y-6">
+          <div className="bg-white border rounded-lg p-6 space-y-6">
+            <h3 className="text-lg font-medium text-gray-900">Header Configuration</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="font-medium text-gray-900">Show WhatsApp Button</label>
+                  <p className="text-sm text-gray-500">Display WhatsApp contact button in header</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={headerForm.showWhatsApp}
+                    onChange={(e) => setHeaderForm({ ...headerForm, showWhatsApp: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              {headerForm.showWhatsApp && (
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label>
+                  <input
+                    type="text"
+                    value={headerForm.whatsappNumber}
+                    onChange={(e) => setHeaderForm({ ...headerForm, whatsappNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    placeholder="6281234567890"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Format: Country code + Number (e.g., 6281234567890). No '+' or spaces.</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="font-medium text-gray-900">Show Email Button</label>
+                  <p className="text-sm text-gray-500">Display Email contact button in header</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={headerForm.showEmail}
+                    onChange={(e) => setHeaderForm({ ...headerForm, showEmail: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="font-medium text-gray-900">Enable Multi-language URLs</label>
+                  <p className="text-sm text-gray-500">If disabled, the site will only use the default language (Indonesian) at the root URL.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={headerForm.enableMultiLanguage}
+                    onChange={(e) => setHeaderForm({ ...headerForm, enableMultiLanguage: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="font-medium text-gray-900">Show Language Switcher</label>
+                  <p className="text-sm text-gray-500">Display language selector dropdown</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={headerForm.showLanguageSwitcher}
+                    onChange={(e) => setHeaderForm({ ...headerForm, showLanguageSwitcher: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Company Title</label>
+                    <input
+                      type="text"
+                      value={headerForm.title}
+                      onChange={(e) => setHeaderForm({ ...headerForm, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      placeholder="Bromo Ijen"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Company Subtitle</label>
+                    <input
+                      type="text"
+                      value={headerForm.subtitle}
+                      onChange={(e) => setHeaderForm({ ...headerForm, subtitle: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      placeholder="Adventure Tour"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={() => handleSaveSettings('header')}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Header Settings</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'menus' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -852,7 +1043,7 @@ const NavigationManager: React.FC = () => {
                     type="text"
                     value={topbarForm.backgroundColor}
                     onChange={(e) => setTopbarForm({ ...topbarForm, backgroundColor: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
                 </div>
               </div>
@@ -872,7 +1063,7 @@ const NavigationManager: React.FC = () => {
                     type="text"
                     value={topbarForm.textColor}
                     onChange={(e) => setTopbarForm({ ...topbarForm, textColor: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
                 </div>
               </div>
@@ -958,7 +1149,7 @@ const NavigationManager: React.FC = () => {
                     type="text"
                     value={itemForm.title}
                     onChange={(e) => setItemForm({ ...itemForm, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     placeholder="Menu Item Title"
                   />
                 </div>
@@ -971,7 +1162,7 @@ const NavigationManager: React.FC = () => {
                     type="text"
                     value={itemForm.url}
                     onChange={(e) => setItemForm({ ...itemForm, url: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     placeholder="/page-url"
                   />
                 </div>
@@ -984,7 +1175,7 @@ const NavigationManager: React.FC = () => {
                 <select
                   value={itemForm.parentId || ''}
                   onChange={(e) => setItemForm({ ...itemForm, parentId: e.target.value || null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 >
                   <option value="">None (Top Level Menu)</option>
                   {Array.isArray(menus) && menus.flatMap(menu => 
@@ -1011,7 +1202,7 @@ const NavigationManager: React.FC = () => {
                   <select
                     value={itemForm.iconType}
                     onChange={(e) => setItemForm({ ...itemForm, iconType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   >
                     <option value="fontawesome">FontAwesome</option>
                     <option value="custom">Custom SVG</option>
@@ -1027,7 +1218,7 @@ const NavigationManager: React.FC = () => {
                     <select
                       value={itemForm.iconName}
                       onChange={(e) => setItemForm({ ...itemForm, iconName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
                       <option value="">Select Icon</option>
                       {fontAwesomeIcons.map(icon => (

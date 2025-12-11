@@ -67,6 +67,7 @@ interface StaticTexts {
   packageNotFoundDesc: string;
   noImageAvailable: string;
   mapNotAvailable: string;
+  backToPackages: string;
   
   // Blog Detail Page
   featured: string;
@@ -139,6 +140,7 @@ const staticTranslations: Record<Language, StaticTexts> = {
     packageNotFoundDesc: 'Paket yang Anda cari tidak ada.',
     noImageAvailable: 'Tidak Ada Gambar',
     mapNotAvailable: 'Peta Tidak Tersedia',
+    backToPackages: 'Kembali ke Paket',
     
     // Blog Detail
     featured: 'Unggulan',
@@ -210,6 +212,7 @@ const staticTranslations: Record<Language, StaticTexts> = {
     packageNotFoundDesc: "The package you're looking for doesn't exist.",
     noImageAvailable: 'No Image Available',
     mapNotAvailable: 'Map Not Available',
+    backToPackages: 'Back to Packages',
     
     // Blog Detail
     featured: 'Featured',
@@ -281,6 +284,7 @@ const staticTranslations: Record<Language, StaticTexts> = {
     packageNotFoundDesc: 'Das gesuchte Paket existiert nicht.',
     noImageAvailable: 'Kein Bild verfügbar',
     mapNotAvailable: 'Karte nicht verfügbar',
+    backToPackages: 'Zurück zu den Paketen',
     
     // Blog Detail
     featured: 'Hervorgehoben',
@@ -352,6 +356,7 @@ const staticTranslations: Record<Language, StaticTexts> = {
     packageNotFoundDesc: 'Het pakket dat u zoekt bestaat niet.',
     noImageAvailable: 'Geen afbeelding beschikbaar',
     mapNotAvailable: 'Kaart niet beschikbaar',
+    backToPackages: 'Terug naar pakketten',
     
     // Blog Detail
     featured: 'Uitgelicht',
@@ -423,6 +428,7 @@ const staticTranslations: Record<Language, StaticTexts> = {
     packageNotFoundDesc: '您要找的套餐不存在。',
     noImageAvailable: '无图片',
     mapNotAvailable: '地图不可用',
+    backToPackages: '返回套餐',
     
     // Blog Detail
     featured: '精选',

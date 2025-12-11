@@ -721,8 +721,43 @@ export async function GET(request: NextRequest) {
             backgroundVideo: sectionData.backgroundVideo,
             image: sectionData.image,
             // For JSON fields: use translation if exists, otherwise fallback to original
-            destinations: translation.destinations ? safeParse(translation.destinations, []) : safeParse(sectionData.destinations, []),
-            features: translation.features ? safeParse(translation.features, []) : safeParse(sectionData.features, []),
+            // Normalize destinations: preserve image paths from original, only translate text fields
+            destinations: (() => {
+              const translatedDests = translation.destinations ? safeParse(translation.destinations, []) as any[] : [];
+              const originalDests = safeParse(sectionData.destinations, []) as any[];
+              
+              // If we have translated destinations, merge with original to preserve image paths
+              if (translatedDests.length > 0 && originalDests.length > 0) {
+                return translatedDests.map((translatedDest: any, index: number) => {
+                  const originalDest: any = originalDests[index] || {};
+                  return {
+                    ...translatedDest,
+                    // Always use original image path, never translate it
+                    image: originalDest.image ? String(originalDest.image).trim() : (translatedDest.image ? String(translatedDest.image).trim() : ''),
+                  };
+                });
+              }
+              
+              // If no translation, return original with normalized image paths
+              return originalDests.map((dest: any) => ({
+                ...dest,
+                image: dest.image ? String(dest.image).trim() : '',
+              }));
+            })(),
+            features: (() => {
+              // FIX: For header, ALWAYS use the main record's features because they contain global settings
+              if (sectionData.sectionId === 'header') {
+                return safeParse(sectionData.features, {});
+              }
+              return translation.features ? safeParse(translation.features, []) : safeParse(sectionData.features, []);
+            })(),
+            // Spread header settings to top level if this is header section
+            ...(() => {
+              if (sectionData.sectionId === 'header') {
+                return safeParse(sectionData.features, {});
+              }
+              return {};
+            })(),
             stats: translation.stats ? safeParse(translation.stats, []) : safeParse(sectionData.stats, []),
             packages: translation.packages ? safeParse(translation.packages, []) : safeParse(sectionData.packages, []),
             testimonials: translation.testimonials ? safeParse(translation.testimonials, []) : safeParse(sectionData.testimonials, []),
@@ -771,8 +806,18 @@ export async function GET(request: NextRequest) {
             ctaLink: sectionData.ctaLink,
             backgroundVideo: sectionData.backgroundVideo,
             image: sectionData.image,
-            destinations: safeParse(sectionData.destinations, []),
+            destinations: safeParse(sectionData.destinations, []).map((dest: any) => ({
+              ...dest,
+              image: dest.image ? String(dest.image).trim() : '',
+            })),
             features: safeParse(sectionData.features, []),
+            // Spread header settings to top level if this is header section
+            ...(() => {
+              if (sectionData.sectionId === 'header') {
+                return safeParse(sectionData.features, {});
+              }
+              return {};
+            })(),
             stats: safeParse(sectionData.stats, []),
             packages: safeParse(sectionData.packages, []),
             testimonials: safeParse(sectionData.testimonials, []),
@@ -809,7 +854,21 @@ export async function GET(request: NextRequest) {
           }
         });
 
+        // Helper to extract header settings
+        const getHeaderSettings = (features: any) => {
+          if (sectionData.sectionId === 'header' && features && !Array.isArray(features)) {
+            return features;
+          }
+          return {};
+        };
+
         if (translation) {
+          // FIX: For header, ALWAYS use the main record's features because they contain global settings (showWhatsApp, etc.)
+          // For other sections, prefer translated features
+          const features = sectionData.sectionId === 'header' 
+            ? safeParse(sectionData.features, {}) 
+            : (translation.features ? safeParse(translation.features, []) : safeParse(sectionData.features, []));
+          
           // Use database translation
           return {
             id: sectionData.id,
@@ -825,8 +884,30 @@ export async function GET(request: NextRequest) {
             ctaLink: sectionData.ctaLink,
             backgroundVideo: sectionData.backgroundVideo,
             image: sectionData.image,
-            destinations: translation.destinations ? safeParse(translation.destinations, []) : safeParse(sectionData.destinations, []),
-            features: translation.features ? safeParse(translation.features, []) : safeParse(sectionData.features, []),
+            destinations: (() => {
+              const translatedDests = translation.destinations ? safeParse(translation.destinations, []) as any[] : [];
+              const originalDests = safeParse(sectionData.destinations, []) as any[];
+              
+              // If we have translated destinations, merge with original to preserve image paths
+              if (translatedDests.length > 0 && originalDests.length > 0) {
+                return translatedDests.map((translatedDest: any, index: number) => {
+                  const originalDest: any = originalDests[index] || {};
+                  return {
+                    ...translatedDest,
+                    // Always use original image path, never translate it
+                    image: originalDest.image ? String(originalDest.image).trim() : (translatedDest.image ? String(translatedDest.image).trim() : ''),
+                  };
+                });
+              }
+              
+              // If no translation, return original with normalized image paths
+              return originalDests.map((dest: any) => ({
+                ...dest,
+                image: dest.image ? String(dest.image).trim() : '',
+              }));
+            })(),
+            features: features,
+            ...getHeaderSettings(features),
             stats: translation.stats ? safeParse(translation.stats, []) : safeParse(sectionData.stats, []),
             packages: translation.packages ? safeParse(translation.packages, []) : safeParse(sectionData.packages, []),
             testimonials: translation.testimonials ? safeParse(translation.testimonials, []) : safeParse(sectionData.testimonials, []),
@@ -848,6 +929,8 @@ export async function GET(request: NextRequest) {
             updatedAt: sectionData.updatedAt.toISOString()
           };
         } else {
+          const features = safeParse(sectionData.features, []);
+
           // No translation found, return original data (NO AUTO TRANSLATE)
           return {
             id: sectionData.id,
@@ -860,7 +943,8 @@ export async function GET(request: NextRequest) {
             // backgroundVideo: sectionData.backgroundVideo,
             // image: sectionData.image,
             destinations: safeParse(sectionData.destinations, []),
-            features: safeParse(sectionData.features, []),
+            features: features,
+            ...getHeaderSettings(features),
             stats: safeParse(sectionData.stats, []),
             // packages: safeParse(sectionData.packages, []),
             // testimonials: safeParse(sectionData.testimonials, []),
@@ -916,7 +1000,12 @@ export async function POST(request: NextRequest) {
         backgroundVideo: data.backgroundVideo,
         image: data.image,
         destinations: data.destinations ? JSON.stringify(data.destinations) : null,
-        features: data.features ? JSON.stringify(data.features) : null,
+        features: section === 'header' ? JSON.stringify({
+          showWhatsApp: data.showWhatsApp,
+          showEmail: data.showEmail,
+          showLanguageSwitcher: data.showLanguageSwitcher,
+          whatsappNumber: data.whatsappNumber
+        }) : (data.features ? JSON.stringify(data.features) : null),
         stats: data.stats ? JSON.stringify(data.stats) : null,
         packages: data.packages ? JSON.stringify(data.packages) : null,
         testimonials: data.testimonials ? JSON.stringify(data.testimonials) : null,
@@ -939,7 +1028,12 @@ export async function POST(request: NextRequest) {
         backgroundVideo: data.backgroundVideo,
         image: data.image,
         destinations: data.destinations ? JSON.stringify(data.destinations) : null,
-        features: data.features ? JSON.stringify(data.features) : null,
+        features: section === 'header' ? JSON.stringify({
+          showWhatsApp: data.showWhatsApp,
+          showEmail: data.showEmail,
+          showLanguageSwitcher: data.showLanguageSwitcher,
+          whatsappNumber: data.whatsappNumber
+        }) : (data.features ? JSON.stringify(data.features) : null),
         stats: data.stats ? JSON.stringify(data.stats) : null,
         packages: data.packages ? JSON.stringify(data.packages) : null,
         testimonials: data.testimonials ? JSON.stringify(data.testimonials) : null,

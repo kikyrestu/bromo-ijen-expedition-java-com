@@ -1,27 +1,31 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import routingConfig from './config/routing.json';
 
 // Supported languages (matching Inlang config)
 const languages = ['id', 'en', 'de', 'nl', 'zh'];
 const defaultLanguage = 'id';
 
 // Public paths that don't need language prefix
-const publicPaths = [
-  '/api',
-  '/_next',
-  '/favicon.ico',
-  '/robots.txt',
-  '/sitemap.xml',
-  '/og-default.jpg',
-  '/uploads',
-  '/tinymce',
-  '/admin',
-  '/api-docs',
-  '/api-testing',
-  '/sections',
-  '/maheswaradev', // Admin area
-  '/cms' // CMS area
-];
+  const publicPaths = [
+    '/api',
+    '/_next',
+    '/favicon.ico',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/og-default.jpg',
+    '/uploads',
+    '/backups', // Allow access to backup files
+    '/assets', // Static assets (images, icons, etc.)
+    '/tinymce',
+    '/admin',
+    '/api-docs',
+    '/api-testing',
+    '/sections',
+    '/maheswaradev', // Admin area
+    '/cms', // CMS area
+    '/google' // Google verification files
+  ];
 
 // Protected routes that require authentication
 const protectedRoutes = ['/cms', '/maheswaradev/admin'];
@@ -70,11 +74,28 @@ export async function middleware(request: NextRequest) {
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
-  
-  // Debug logging for language switching
-  // if (pathname.includes('/en') || pathname.includes('/de') || pathname.includes('/zh') || pathname.includes('/nl')) {
-  //   console.log('🌍 Middleware processing language path:', pathname);
-  // }
+
+  // Check routing settings (Single Language Mode)
+  // @ts-ignore
+  const enableMultiLanguage = routingConfig.enableMultiLanguage !== false;
+
+  // If Multi-language is DISABLED:
+  // 1. If path has language prefix (e.g. /en/...), redirect to root (strip prefix)
+  // 2. If path has NO prefix, rewrite to default language (internal /id/...)
+  if (!enableMultiLanguage) {
+    const pathnameHasLanguage = languages.some(
+      (lang) => pathname.startsWith(`/${lang}/`) || pathname === `/${lang}`
+    );
+
+    if (pathnameHasLanguage) {
+      // Strip language prefix
+      const newPath = pathname.replace(new RegExp(`^/(${languages.join('|')})`), '') || '/';
+      return NextResponse.redirect(new URL(newPath, request.url));
+    }
+
+    // Rewrite to default language (internal)
+    return NextResponse.rewrite(new URL(`/${defaultLanguage}${pathname}`, request.url));
+  }
 
   // Check if pathname already has a language prefix
   const pathnameHasLanguage = languages.some(
@@ -124,8 +145,9 @@ export const config = {
      * - sitemap.xml (sitemap file)
      * - og-default.jpg (default OG image)
      * - uploads (uploaded files)
+     * - assets (static assets)
      * - tinymce (TinyMCE assets)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|og-default.jpg|uploads|tinymce).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|og-default.jpg|uploads|assets|tinymce|google).*)',
   ],
 };

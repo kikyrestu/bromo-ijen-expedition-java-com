@@ -4,58 +4,6 @@ import { getGalleryTranslation } from '@/lib/auto-translate';
 
 const prisma = new PrismaClient();
 
-// Mock gallery data
-const mockGalleryItems = [
-  {
-    id: '1',
-    title: 'Bromo Sunrise',
-    category: 'Landscape',
-    image: '/uploads/bromo-sunrise-1.jpg',
-    description: 'Spectacular sunrise view from Mount Bromo',
-    tags: ['sunrise', 'bromo', 'volcano', 'landscape'],
-    likes: 150,
-    views: 1200,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
-  },
-  {
-    id: '2',
-    title: 'Ijen Blue Fire',
-    category: 'Adventure',
-    image: '/uploads/ijen-blue-fire-1.jpg',
-    description: 'The mesmerizing blue fire phenomenon at Ijen Crater',
-    tags: ['blue fire', 'ijen', 'crater', 'adventure'],
-    likes: 200,
-    views: 1500,
-    createdAt: new Date('2024-01-02'),
-    updatedAt: new Date('2024-01-02')
-  },
-  {
-    id: '3',
-    title: 'Penanjakan Viewpoint',
-    category: 'Landscape',
-    image: '/uploads/penanjakan-1.jpg',
-    description: 'Panoramic view from Penanjakan viewpoint',
-    tags: ['viewpoint', 'panorama', 'bromo', 'landscape'],
-    likes: 120,
-    views: 900,
-    createdAt: new Date('2024-01-03'),
-    updatedAt: new Date('2024-01-03')
-  },
-  {
-    id: '4',
-    title: 'Sulfur Mining',
-    category: 'Culture',
-    image: '/uploads/sulfur-mining-1.jpg',
-    description: 'Traditional sulfur mining at Ijen Crater',
-    tags: ['sulfur', 'mining', 'culture', 'tradition'],
-    likes: 80,
-    views: 600,
-    createdAt: new Date('2024-01-04'),
-    updatedAt: new Date('2024-01-04')
-  }
-];
-
 // Helper: Parse JSON string safely
 function safeParse(jsonString: any, fallback: any = []) {
   if (typeof jsonString !== 'string') return fallback;

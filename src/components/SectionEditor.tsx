@@ -18,10 +18,10 @@ import {
   Users,
   Award,
   Shield,
+  Settings,
   Star,
   Clock,
   Heart,
-  Settings,
   BarChart3,
   Code
 } from 'lucide-react';
@@ -66,6 +66,10 @@ interface SectionContent {
   // Gallery-specific settings
   showFilters?: boolean;
   enableLightbox?: boolean;
+  // Header-specific settings
+  showWhatsApp?: boolean;
+  showEmail?: boolean;
+  showLanguageSwitcher?: boolean;
   // Animation settings (for Carousel & other animated layouts)
   enableAutoSlide?: boolean;
   autoSlideInterval?: number;
@@ -101,6 +105,7 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
   const [whyContent, setWhyContent] = useState<SectionContent | null>(null);
   const [hideWhyBasic, setHideWhyBasic] = useState<boolean>(false);
   const [hideWhyFeatures, setHideWhyFeatures] = useState<boolean>(false);
+  const [hideWhySummary, setHideWhySummary] = useState<boolean>(false);
 
   // Media Manager state
   const [showMediaManager, setShowMediaManager] = useState(false);
@@ -192,6 +197,11 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
           }
         });
       }
+    }
+
+    // Log validation errors for debugging
+    if (Object.keys(newErrors).length > 0) {
+      console.error('❌ Validation Errors:', newErrors);
     }
 
     if (sectionId === 'testimonials') {
@@ -1145,7 +1155,7 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
     );
   };
 
-  const renderArrayField = (field: string, label: string, fields: { name: string; label: string; type?: string; required?: boolean; placeholder?: string }[], showHeader: boolean = true) => {
+  const renderArrayField = (field: string, label: string, fields: { name: string; label: string; type?: string; required?: boolean; placeholder?: string }[], showHeader: boolean = true, defaultValues: any = {}) => {
     if (!content) return null;
 
     const rawArray = content[field as keyof SectionContent];
@@ -1159,7 +1169,7 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
           <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
           <button
-            onClick={() => addArrayItem(field, fields.reduce((acc, f) => ({ ...acc, [f.name]: '' }), {}))}
+            onClick={() => addArrayItem(field, { ...fields.reduce((acc, f) => ({ ...acc, [f.name]: '' }), {}), ...defaultValues })}
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm transition-colors"
           >
               <Plus className="w-4 h-4 mr-2 inline" />
@@ -1429,7 +1439,8 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                 title: content.title,
                 subtitle: content.subtitle,
                 description: content.description,
-                destinations: (content.destinations as any) || []
+                destinations: (content.destinations as any) || [],
+                categories: (content.categories as any) || []
               }}
             />
           </div>
@@ -1809,35 +1820,15 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                     </div>
                   </div>
 
-                  {/* Header Info Section */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Header Information</h4>
-                    <div className="space-y-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
+                    <div className="flex items-center gap-3">
+                      <Settings className="w-5 h-5 text-blue-600" />
                       <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">Company Title</label>
-                        <input
-                          type="text"
-                          value={content?.title || ''}
-                          onChange={(e) => updateContent('title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          placeholder="Bromo Ijen"
-                        />
+                        <h4 className="font-medium text-blue-900">Header Settings Moved</h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Header configuration (WhatsApp, Email, Language, Title) has been moved to the <strong>Navigation Manager</strong>.
+                        </p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">Company Subtitle</label>
-                        <input
-                          type="text"
-                          value={content?.subtitle || ''}
-                          onChange={(e) => updateContent('subtitle', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          placeholder="Adventure Tour"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <p className="text-xs text-gray-500 mb-2">
-                        💡 <strong>Tips:</strong> Language selector is automatically included in the header. No additional configuration needed.
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -1908,7 +1899,12 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                       { name: 'position.x', label: 'Position X' },
                       { name: 'position.y', label: 'Position Y' },
                       { name: 'media', label: 'Media URL', type: 'url' }
-                    ], true)}
+                    ], true, {
+                      name: 'New Destination',
+                      description: 'Description here...',
+                      'position.x': 50,
+                      'position.y': 50
+                    })}
                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-800">
                         💡 <strong>Tips:</strong> 
@@ -1947,13 +1943,29 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                     {renderArrayField('destinations', '', [
                       { name: 'name', label: 'Name', required: true },
                       { name: 'location', label: 'Location' },
-          { name: 'description', label: 'Description', type: 'textarea' },
+                      { name: 'description', label: 'Description', type: 'textarea' },
                       { name: 'image', label: 'Image URL', type: 'url' },
                       { name: 'tours', label: 'Tours', type: 'number' },
                       { name: 'featured', label: 'Featured' }
                     ], true)}
                   </div>
                 )}
+
+                {/* Categories Editor */}
+                <div className="mt-8 border-t border-gray-200 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">Categories</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Manage the filter categories displayed in this section.
+                    </p>
+                    {renderArrayField('categories', '', [
+                      { name: 'id', label: 'ID (e.g., volcano)', required: true },
+                      { name: 'label', label: 'Label (e.g., Volcanoes)', required: true }
+                    ], true, { id: '', label: '' })}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2027,7 +2039,7 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                   <button onClick={() => setHideStats(!hideStats)} className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50">{hideStats ? 'Show' : 'Hide'}</button>
                 </div>
                 {!hideStats && renderArrayField('stats', '', [
-                  { name: 'number', label: 'Number', required: true },
+                  { name: 'value', label: 'Value', required: true },
                   { name: 'label', label: 'Label', required: true }
                 ], true)}
               </div>
@@ -2099,6 +2111,17 @@ const SectionEditor = ({ sectionId, onSave, onCancel }: SectionEditorProps) => {
                       { name: 'icon', label: 'Icon Name' },
                       { name: 'title', label: 'Title', required: true },
                       { name: 'description', label: 'Description', type: 'textarea', required: true }
+                    ], true)}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-gray-800">Summary Stats</h4>
+                      <button onClick={() => setHideWhySummary(!hideWhySummary)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 hover:bg-gray-50">{hideWhySummary ? 'Show' : 'Hide'}</button>
+                    </div>
+                    {!hideWhySummary && renderWhyArrayField('summary', '', [
+                      { name: 'value', label: 'Value', required: true },
+                      { name: 'label', label: 'Label', required: true }
                     ], true)}
                   </div>
                 </div>

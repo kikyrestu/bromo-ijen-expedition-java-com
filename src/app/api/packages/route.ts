@@ -29,15 +29,19 @@ function safeParse(jsonString: string | null, fallback: any = []) {
 
 // Helper function to format package for API response
 function formatPackage(pkg: any) {
+  const price = Number(pkg.price);
+  const originalPrice = pkg.originalPrice ? Number(pkg.originalPrice) : null;
+
   return {
     id: pkg.id,
     slug: pkg.slug || pkg.id,
     title: pkg.title,
     name: pkg.title,
     duration: pkg.duration,
-    price: `Rp ${pkg.price.toLocaleString('id-ID')}`,
-    priceRaw: pkg.price,
-    originalPrice: pkg.originalPrice ? `Rp ${pkg.originalPrice.toLocaleString('id-ID')}` : null,
+    price: isNaN(price) ? 'Rp 0' : `Rp ${price.toLocaleString('id-ID')}`,
+    priceRaw: isNaN(price) ? 0 : price,
+    originalPrice: originalPrice && !isNaN(originalPrice) ? `Rp ${originalPrice.toLocaleString('id-ID')}` : null,
+    originalPriceRaw: originalPrice && !isNaN(originalPrice) ? originalPrice : null,
     discount: pkg.discount,
     rating: pkg.rating,
     reviews: pkg.reviewCount,

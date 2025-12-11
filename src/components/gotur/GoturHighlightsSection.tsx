@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { JSX, useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 

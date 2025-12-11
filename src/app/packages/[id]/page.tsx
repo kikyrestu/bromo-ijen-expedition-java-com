@@ -187,7 +187,7 @@ Saya tertarik dengan paket tour:
 📅 Keberangkatan: ${formatDate(pkg.departure)}
 🔙 Kepulangan: ${formatDate(pkg.return)}
 👥 Maks Peserta: ${pkg.totalPeople || '-'} orang
-💰 Harga: ${formatCurrency(pkg.price)}
+💰 Harga: ${formatCurrency(pkg.priceRaw || 0)}
 
 Bisa minta info lebih lanjut dan ketersediaan tanggal?
 

@@ -26,11 +26,16 @@ export const ROLES = {
   SUBSCRIBER: 'subscriber'
 } as const;
 
-export type UserRole = typeof ROLES[keyof typeof ROLES];
+export type UserRole = keyof typeof ROLES;
+type RoleValue = typeof ROLES[UserRole];
 
 // Role capabilities (WordPress-style)
-export const CAPABILITIES = {
-  administrator: [
+type Capabilities = {
+  [key in RoleValue]: string[];
+};
+
+export const CAPABILITIES: Capabilities = {
+  [ROLES.ADMINISTRATOR]: [
     'manage_options',
     'manage_users',
     'edit_theme_options',
@@ -86,12 +91,13 @@ export const CAPABILITIES = {
 
 // Check if user has capability
 export function userCan(role: UserRole, capability: string): boolean {
-  return CAPABILITIES[role]?.includes(capability) || false;
+  const roleValue = ROLES[role];
+  return CAPABILITIES[roleValue]?.includes(capability) || false;
 }
 
 // Check if role can access CMS
 export function canAccessCMS(role: UserRole): boolean {
-  return role !== ROLES.SUBSCRIBER;
+  return role !== 'SUBSCRIBER';
 }
 
 // Session expiry (7 days)

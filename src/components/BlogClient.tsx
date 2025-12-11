@@ -3,18 +3,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
-import AnimatedSection from './AnimatedSection';
 import BannerSlot from '@/components/banners/BannerSlot';
 import { 
   Search, 
   Calendar, 
   User, 
   Clock,
-  Tag,
   ArrowRight,
   BookOpen,
-  TrendingUp
+  TrendingUp,
+  Filter,
+  Tag,
+  MapPin,
+  Compass
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BlogPost {
   id: string;
@@ -44,11 +47,11 @@ export default function BlogClient({ lang }: BlogClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const categories = [
-    { id: 'all', name: t('blog.categories.all', 'All Posts'), count: 0 },
-    { id: 'travel', name: t('blog.categories.travelTips', 'Travel Tips'), count: 0 },
-    { id: 'guides', name: t('blog.categories.travelGuides', 'Travel Guides'), count: 0 },
-    { id: 'adventure', name: t('blog.categories.adventure', 'Adventure'), count: 0 },
-    { id: 'stories', name: t('blog.categories.stories', 'Travel Stories'), count: 0 }
+    { id: 'all', name: t('blog.categories.all', 'All Posts') },
+    { id: 'travel', name: t('blog.categories.travelTips', 'Travel Tips') },
+    { id: 'guides', name: t('blog.categories.travelGuides', 'Travel Guides') },
+    { id: 'adventure', name: t('blog.categories.adventure', 'Adventure') },
+    { id: 'stories', name: t('blog.categories.stories', 'Travel Stories') }
   ];
 
   useEffect(() => {
@@ -100,8 +103,10 @@ export default function BlogClient({ lang }: BlogClientProps) {
   };
 
   const getLocalizedUrl = (slug: string) => {
-    if (currentLanguage === 'id') return `/blog/${slug}`;
-    return `/${currentLanguage}/blog/${slug}`;
+    // If slug is missing, fallback to id or empty string to prevent errors
+    const identifier = slug || '';
+    if (currentLanguage === 'id') return `/blog/${identifier}`;
+    return `/${currentLanguage}/blog/${identifier}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -115,246 +120,253 @@ export default function BlogClient({ lang }: BlogClientProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
+  const featuredPost = filteredPosts.find(p => p.featured) || filteredPosts[0];
+  const regularPosts = filteredPosts.filter(p => p.id !== featuredPost?.id);
+
   return (
-    <div className="bg-slate-950 text-white">
+    <div className="min-h-screen bg-gray-50 text-slate-900 pb-20 font-sans selection:bg-orange-500/30">
       {/* Hero Section */}
-      <AnimatedSection animation="fadeInUp" delay={0.1} duration={0.8}>
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-600 via-orange-700 to-amber-500 opacity-90" />
-          <div className="absolute -top-24 -right-32 h-80 w-80 rounded-full bg-white/20 blur-3xl" />
-          <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-32 pb-28 text-center">
-            <div className="inline-flex items-center space-x-2 bg-white/10 border border-white/20 backdrop-blur-md px-4 py-2 rounded-full mb-6">
-              <BookOpen className="w-5 h-5" />
-              <span className="text-sm font-medium tracking-widest uppercase">{t('blog.subtitle') || 'Travel Journal'}</span>
+      <div className="relative pt-40 pb-24 overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop')] bg-cover bg-center opacity-10 fixed-bg" />
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-50/80 via-gray-50/90 to-gray-50" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+        
+        {/* Decorative Blobs */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px] animate-pulse delay-1000" />
+
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm text-orange-600 text-sm font-medium mb-8">
+              <Compass className="w-4 h-4 animate-spin-slow" />
+              <span className="tracking-wide uppercase text-xs font-bold">{t('blog.subtitle') || 'Travel Journal'}</span>
             </div>
-            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-tight">
+            
+            <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight text-slate-900">
               {t('blog.title') || 'Blog & Stories'}
             </h1>
-            <p className="mt-6 text-lg md:text-xl max-w-3xl mx-auto text-white/85">
-              {t('blog.description') || 'Travel tips, guides, and adventure stories from our journeys'}
+            
+            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed font-light">
+              {t('blog.description') || 'Discover travel tips, guides, and adventure stories from our journeys across Indonesia.'}
             </p>
+          </motion.div>
+        </div>
+      </div>
+
+      <BannerSlot location="blog.hero" variant="hero" className="px-6 mb-16 max-w-7xl mx-auto" />
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        {/* Search & Filter Bar */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="sticky top-24 z-40 mb-16"
+        >
+          <div className="p-2 rounded-[2rem] bg-white/80 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-200/50">
+            <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
+              {/* Categories */}
+              <div className="flex overflow-x-auto pb-2 md:pb-0 gap-1 w-full md:w-auto no-scrollbar px-2">
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-5 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+                      selectedCategory === category.id
+                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search */}
+              <div className="relative w-full md:w-80 group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                </div>
+                <input
+                  type="text"
+                  placeholder={t('blog.searchPlaceholder') || 'Search articles...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="block w-full pl-12 pr-4 py-3 rounded-full bg-slate-50 border border-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-orange-500/50 transition-all"
+                />
+              </div>
+            </div>
           </div>
-        </section>
-      </AnimatedSection>
+        </motion.div>
 
-      <BannerSlot location="blog.hero" variant="hero" className="px-6" />
-
-      {/* Search and Filter Section */}
-      <AnimatedSection animation="fadeInUp" delay={0.2} duration={0.8}>
-        <section className="-mt-16 pb-12">
-          <div className="max-w-6xl mx-auto px-6 lg:px-8">
-            <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] p-8">
-              {/* Search Bar */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder={t('blog.searchPlaceholder') || 'Cari artikel...'}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-white/10 bg-white/10 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-orange-400/70"
+        {/* Featured Post */}
+        {featuredPost && !searchQuery && selectedCategory === 'all' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mb-20"
+          >
+            <Link href={getLocalizedUrl(featuredPost.slug || featuredPost.id)} className="group block relative rounded-[2rem] overflow-hidden bg-white border border-slate-200 hover:border-orange-500/30 transition-all duration-500 shadow-xl hover:shadow-2xl hover:shadow-orange-500/10">
+              <div className="grid md:grid-cols-12 gap-0">
+                <div className="md:col-span-7 relative h-80 md:h-[500px] overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-10 md:bg-gradient-to-r" />
+                  <img
+                    src={featuredPost.image || 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80'}
+                    alt={featuredPost.title}
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                   />
-                </div>
-              </div>
-
-              {/* Category Filter */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                        selectedCategory === category.id
-                          ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                          : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-sm text-white/70">
-                  {t('blog.resultsCount', `${filteredPosts.length} artikel ketemu`).replace('{count}', filteredPosts.length.toString())}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
-
-      {/* Featured Post */}
-      {filteredPosts.length > 0 && (
-        <AnimatedSection animation="fadeInUp" delay={0.3} duration={0.8}>
-          <div className="max-w-6xl mx-auto px-6 lg:px-8 mb-16">
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 shadow-[0_25px_80px_-25px_rgba(251,191,36,0.6)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_60%)]" />
-              <div className="relative grid md:grid-cols-2 gap-0">
-                {/* Image */}
-                <div className="relative h-80 md:h-full overflow-hidden">
-                  {filteredPosts[0].image ? (
-                    <img
-                      src={filteredPosts[0].image}
-                      alt={filteredPosts[0].title}
-                      className="w-full h-full object-cover scale-105 hover:scale-110 transition-transform duration-700"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-24 h-24 text-white/30" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-10 md:p-14 flex flex-col justify-center text-white">
-                  <div className="flex items-center space-x-3 mb-5 text-white/80">
-                    <span className="inline-flex items-center space-x-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest">
-                      <TrendingUp className="w-4 h-4" />
-                      <span>{t('blog.featuredBadge', 'Featured')}</span>
-                    </span>
-                    <span className="text-sm bg-white/10 px-3 py-1 rounded-full border border-white/20">
-                      {filteredPosts[0].category || t('blog.categoryDefault', 'Uncategorized')}
+                  <div className="absolute top-6 left-6 z-20">
+                    <span className="px-4 py-2 rounded-full bg-orange-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                      <TrendingUp className="w-3 h-3" />
+                      Featured Story
                     </span>
                   </div>
-
-                  <h2 className="text-3xl md:text-4xl font-semibold mb-4 leading-snug">
-                    {filteredPosts[0].title}
-                  </h2>
+                </div>
+                <div className="md:col-span-5 p-8 md:p-12 flex flex-col justify-center relative">
+                  {/* Decorative background for text area */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white/80 backdrop-blur-sm md:hidden" />
                   
-                  <p className="text-base md:text-lg text-white/80 mb-6 line-clamp-3">
-                    {filteredPosts[0].excerpt}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-5 text-sm text-white/70 mb-8">
-                    <div className="flex items-center space-x-2">
-                      <User className="w-4 h-4" />
-                      <span>{filteredPosts[0].author}</span>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 text-sm text-slate-500 mb-6">
+                      <span className="text-orange-600 font-medium px-3 py-1 rounded-full bg-orange-50 border border-orange-200">
+                        {featuredPost.category}
+                      </span>
+                      <span>•</span>
+                      <span>{formatDate(featuredPost.publishDate)}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{formatDate(filteredPosts[0].publishDate)}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{filteredPosts[0].readTime}</span>
+                    
+                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-slate-900 group-hover:text-orange-600 transition-colors leading-tight">
+                      {featuredPost.title}
+                    </h2>
+                    
+                    <p className="text-slate-600 mb-8 line-clamp-3 text-lg leading-relaxed">
+                      {featuredPost.excerpt}
+                    </p>
+                    
+                    <div className="flex items-center justify-between pt-8 border-t border-slate-100">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <User className="w-4 h-4 text-orange-500" />
+                          {featuredPost.author}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Clock className="w-4 h-4 text-orange-500" />
+                          {featuredPost.readTime}
+                        </div>
+                      </div>
+                      
+                      <span className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                        <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                      </span>
                     </div>
                   </div>
-
-                  <Link href={getLocalizedUrl(filteredPosts[0].slug)}>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-white text-orange-600 px-6 py-3 font-semibold shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5">
-                      <span>{t('blog.heroCta', 'Read More')}</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </span>
-                  </Link>
                 </div>
               </div>
-            </div>
-          </div>
-        </AnimatedSection>
-      )}
+            </Link>
+          </motion.div>
+        )}
 
-      {/* Posts Grid */}
-      <AnimatedSection animation="fadeInUp" delay={0.4} duration={0.8}>
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 pb-24">
-          {filteredPosts.length === 0 ? (
-            <div className="text-center py-20">
-              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('blog.emptyTitle', 'No articles found')}</h3>
-              <p className="text-gray-600">{t('blog.emptyDescription', 'Try adjusting your search or filter criteria')}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredPosts.slice(1).map((post, index) => (
-                <div
-                  key={post.id}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-[0_20px_60px_-30px_RGBA(15,23,42,0.8)] transition-all duration-300 hover:-translate-y-1"
+        {/* Posts Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <AnimatePresence mode="popLayout">
+            {(searchQuery || selectedCategory !== 'all' ? filteredPosts : regularPosts).map((post, index) => (
+              <motion.div
+                key={post.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <Link 
+                  href={getLocalizedUrl(post.slug || post.id)}
+                  className="group flex flex-col h-full bg-white border border-slate-200 rounded-[2rem] overflow-hidden hover:border-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 hover:-translate-y-2"
                 >
-                  {/* Image */}
-                  <Link href={getLocalizedUrl(post.slug)}>
-                    <div className="relative h-48 overflow-hidden">
-                      {post.image ? (
-                        <img
-                          src={post.image}
-                          alt={post.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <BookOpen className="w-16 h-16 text-white/30" />
-                        </div>
-                      )}
-
-                      {post.featured && (
-                        <div className="absolute top-4 left-4 rounded-full bg-orange-500/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-                          {t('blog.highlightBadge', 'Highlight')}
-                        </div>
-                      )}
+                  <div className="relative h-72 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity" />
+                    <img
+                      src={post.image || 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80'}
+                      alt={post.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute top-4 left-4 z-20">
+                      <span className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white/20 text-slate-900 text-xs font-medium flex items-center gap-1.5 shadow-sm">
+                        <Tag className="w-3 h-3 text-orange-500" />
+                        {post.category}
+                      </span>
                     </div>
-                  </Link>
-
-                  <div className="flex flex-1 flex-col p-6">
-                    <div className="mb-4 flex items-center">
-                      <span className="inline-flex items-center rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-orange-300">
-                        {post.category || t('blog.categoryDefault', 'Uncategorized')}
+                  </div>
+                  
+                  <div className="flex flex-col flex-grow p-8">
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mb-4 font-medium uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                        {formatDate(post.publishDate)}
                       </span>
                     </div>
 
-                    <Link href={getLocalizedUrl(post.slug)}>
-                      <h3 className="text-lg font-semibold text-white mb-3 line-clamp-2 transition-colors group-hover:text-orange-300">
-                        {post.title}
-                      </h3>
-                    </Link>
+                    <h3 className="text-2xl font-bold mb-3 line-clamp-2 text-slate-900 group-hover:text-orange-600 transition-colors leading-snug">
+                      {post.title}
+                    </h3>
                     
-                    <p className="text-sm text-white/70 mb-6 line-clamp-3">
+                    <p className="text-slate-600 text-sm line-clamp-3 mb-6 flex-grow leading-relaxed">
                       {post.excerpt}
                     </p>
 
-                    {/* Meta */}
-                    <div className="mb-6 flex items-center justify-between text-xs text-white/50">
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(post.publishDate)}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {post.readTime}
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-auto group/btn">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-slate-700 font-medium">{post.author}</span>
+                          <span className="text-[10px] text-slate-400">{post.readTime} read</span>
+                        </div>
+                      </div>
+                      
+                      <span className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                        <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
                       </span>
                     </div>
-
-                    {/* Tags */}
-                    {post.tags && post.tags.length > 0 && (
-                      <div className="mb-6 flex flex-wrap gap-2">
-                        {post.tags.slice(0, 3).map((tag, idx) => (
-                          <span key={idx} className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-xs text-white/70">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* CTA */}
-                    <Link href={getLocalizedUrl(post.slug)}>
-                      <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:border-orange-400 hover:bg-orange-400/20">
-                        {t('blog.cardCta', 'Read Article')}
-                        <ArrowRight className="w-4 h-4" />
-                      </span>
-                    </Link>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                </Link>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-      </AnimatedSection>
 
-      <BannerSlot location="blog.postFooter" variant="section" className="px-6" />
+        {filteredPosts.length === 0 && (
+          <div className="text-center py-32">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-slate-100 mb-6 border border-slate-200">
+              <Search className="w-10 h-10 text-slate-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">No articles found</h3>
+            <p className="text-slate-500 max-w-md mx-auto">
+              We couldn't find any articles matching your search. Try adjusting your keywords or category filters.
+            </p>
+            <button 
+              onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+              className="mt-8 px-6 py-2.5 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      <BannerSlot location="blog.postFooter" variant="section" className="px-6 mt-24 max-w-7xl mx-auto" />
     </div>
   );
 }

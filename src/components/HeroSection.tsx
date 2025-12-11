@@ -50,7 +50,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
   const [subtitle, setSubtitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [backgroundVideo, setBackgroundVideo] = useState<string>(
-    overrideContent?.backgroundVideo ?? '/hero-image.jpg'
+    overrideContent?.backgroundVideo ?? ''
   );
 
   const computedDestinations = localDestinations ?? destinations;
@@ -125,10 +125,10 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
 
   // Sync when overrideContent changes
   useEffect(() => {
-    console.log('🎬 HeroSection: Override content changed:', { 
+    /* console.log('🎬 HeroSection: Override content changed:', { 
       backgroundVideo: overrideContent?.backgroundVideo,
       title: overrideContent?.title 
-    });
+    }); */
     if (overrideContent?.destinations) {
       setDestinations(overrideContent.destinations);
     }
@@ -249,7 +249,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
     <div
       className="relative overflow-hidden"
       data-hero-section
-      style={{ marginTop: '-80px', paddingTop: '160px', minHeight: '100vh' }}
+      style={{ marginTop: '-80px', paddingTop: '120px', minHeight: '100vh' }}
       key={`hero-${currentLanguage}`}
     >
       {/* Background Video/Image Canvas */}
@@ -359,7 +359,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
                   
                   {/* Card with Name + Description (Only on Hover) */}
                   <div className="absolute top-0 left-0 pointer-events-none group-hover:pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
-                    <div className="w-[320px] bg-black/70 backdrop-blur-xl shadow-2xl border border-white/20 rounded-xl p-4">
+                    <div className="w-[280px] bg-black/70 backdrop-blur-xl shadow-2xl border border-white/20 rounded-xl p-4">
                       <h3 className="text-sm sm:text-base font-semibold text-white mb-2">
                         {dest.name || 'Destination'}
                       </h3>
@@ -411,7 +411,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
                   
                   {/* Card with Name + Description (Only on Hover) */}
                   <div className="absolute top-0 left-0 pointer-events-none group-hover:pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
-                    <div className="w-[320px] bg-black/70 backdrop-blur-xl shadow-2xl border border-white/20 rounded-xl p-4">
+                    <div className="w-[280px] bg-black/70 backdrop-blur-xl shadow-2xl border border-white/20 rounded-xl p-4">
                       <h3 className="text-sm sm:text-base font-semibold text-white mb-2">
                         {currentDest.name || 'Destination'}
                       </h3>
@@ -496,7 +496,7 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
       }`}>
         <AnimatedSection animation="fadeInUp" delay={0.3} duration={1.2}>
           <div className="text-center text-white">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-light mb-2 sm:mb-4 opacity-90">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light mb-2 sm:mb-4 opacity-90">
               {overrideContent?.title || title || t('hero.title')}
             </h1>
             {subtitle && (
@@ -505,9 +505,10 @@ const HeroSection = ({ overrideContent, disableAuto = false, editable = false, o
               </h2>
             )}
             {description && (
-              <p className="text-sm sm:text-base md:text-lg opacity-80 max-w-3xl mx-auto mb-4">
-                {description}
-              </p>
+              <div 
+                className="text-sm sm:text-base md:text-lg opacity-80 max-w-3xl mx-auto mb-4 [&>p]:mb-2 last:[&>p]:mb-0"
+                dangerouslySetInnerHTML={{ __html: description }}
+              />
             )}
             <p className="text-base sm:text-lg md:text-xl opacity-80 max-w-2xl mx-auto">
               {computedDestinations[currentDestination]?.name || ''}

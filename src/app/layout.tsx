@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html>
+    <html data-scroll-behavior="smooth">
       <body
         className={`${poppins.variable} font-poppins antialiased`}
         suppressHydrationWarning

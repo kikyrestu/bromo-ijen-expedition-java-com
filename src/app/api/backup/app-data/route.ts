@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       message: 'Application data backup created successfully',
       filename: latestFile,
       size: fileSize,
-      path: `/backups/${latestFile}`
+      path: `/api/backup/download?filename=${encodeURIComponent(latestFile)}`
     });
     
   } catch (error: any) {

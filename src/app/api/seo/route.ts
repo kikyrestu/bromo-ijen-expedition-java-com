@@ -24,17 +24,50 @@ async function generateDynamicSeoData(pageType: string, pageSlug: string, langua
     let content = null;
     
     if (pageType === 'section') {
-      const response = await fetch(`${siteUrl}/api/sections?section=${pageSlug}&language=${language}`);
-      const data = await response.json();
-      content = data.success ? data.data : null;
+      try {
+        const response = await fetch(`${siteUrl}/api/sections?section=${pageSlug}&language=${language}`, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          content = data.success ? data.data : null;
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch section ${pageSlug} for SEO:`, error);
+      }
     } else if (pageType === 'package') {
-      const response = await fetch(`${siteUrl}/api/packages?slug=${pageSlug}&language=${language}`);
-      const data = await response.json();
-      content = data.success ? data.data : null;
+      try {
+        const response = await fetch(`${siteUrl}/api/packages?slug=${pageSlug}&language=${language}`, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          content = data.success ? data.data : null;
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch package ${pageSlug} for SEO:`, error);
+      }
     } else if (pageType === 'blog') {
-      const response = await fetch(`${siteUrl}/api/blogs/${pageSlug}?language=${language}`);
-      const data = await response.json();
-      content = data.success ? data.data : null;
+      try {
+        const response = await fetch(`${siteUrl}/api/blogs/${pageSlug}?language=${language}`, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          content = data.success ? data.data : null;
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch blog ${pageSlug} for SEO:`, error);
+      }
     }
     
     if (content) {
@@ -203,10 +236,17 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Trigger sitemap regeneration
-    await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/sitemap/generate`, {
-      method: 'POST'
-    }).catch(() => console.log('Sitemap regeneration triggered'));
+    // Trigger sitemap regeneration (non-blocking, don't wait for response)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    fetch(`${siteUrl}/api/sitemap/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }).catch((error) => {
+      console.warn('Failed to trigger sitemap regeneration:', error);
+      // Non-critical, continue execution
+    });
 
     return NextResponse.json({
       success: true,

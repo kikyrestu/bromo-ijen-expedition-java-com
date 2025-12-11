@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       filename: latestFile.name,
       size: fileSizeMB + ' MB',
       sizeBytes: latestFile.size,
-      path: `/backups/${latestFile.name}`,
+      path: `/api/backup/download?filename=${encodeURIComponent(latestFile.name)}`,
       timestamp: new Date(latestFile.time).toISOString()
     });
     
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
           sizeBytes: stats.size,
           createdAt: stats.mtime.toISOString(),
           timestamp: stats.mtime.getTime(),
-          path: `/backups/${f}`
+          path: `/api/backup/download?filename=${encodeURIComponent(f)}`
         };
       })
       .sort((a, b) => b.timestamp - a.timestamp);

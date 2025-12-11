@@ -25,7 +25,7 @@ export async function autoGeneratePackageSeo(packageData: ContentData) {
       description: packageData.description || packageData.excerpt || `Experience ${packageData.title} with our professional tour package.`,
       keywords: generatePackageKeywords(packageData),
       canonicalUrl: `${siteUrl}/packages/${packageData.slug}`,
-      ogImage: packageData.image || '/og-package-default.jpg',
+      ogImage: packageData.image || '/og-default.jpg',
       ogType: 'product',
       noIndex: false
     };
@@ -61,7 +61,7 @@ export async function autoGenerateBlogSeo(blogData: ContentData) {
       description: blogData.excerpt || blogData.description || `Read about ${blogData.title} in our travel blog.`,
       keywords: generateBlogKeywords(blogData),
       canonicalUrl: `${siteUrl}/blog/${blogData.slug}`,
-      ogImage: blogData.image || '/og-blog-default.jpg',
+      ogImage: blogData.image || '/og-default.jpg',
       ogType: 'article',
       noIndex: false
     };
@@ -97,7 +97,7 @@ export async function autoGenerateSectionSeo(sectionId: string, sectionData: any
       description: sectionData.description || `Learn about ${sectionData.title || sectionId} at Bromo Ijen Tour.`,
       keywords: generateSectionKeywords(sectionData),
       canonicalUrl: `${siteUrl}/#${sectionId}`,
-      ogImage: sectionData.image || '/og-section-default.jpg',
+      ogImage: sectionData.image || '/og-default.jpg',
       ogType: 'website',
       noIndex: false
     };

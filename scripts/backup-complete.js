@@ -7,7 +7,74 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 
 const execAsync = promisify(exec);
+
+// Load .env manually if not loaded
+if (!process.env.DATABASE_URL) {
+  try {
+    const envPath = path.join(__dirname, '../.env');
+    if (fs.existsSync(envPath)) {
+      const envConfig = fs.readFileSync(envPath, 'utf8');
+      envConfig.split('\n').forEach(line => {
+        const match = line.match(/^([^=]+)=(.*)$/);
+        if (match) {
+          const key = match[1].trim();
+          const value = match[2].trim().replace(/^["']|["']$/g, '');
+          process.env[key] = value;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Failed to load .env file manually:', e);
+  }
+}
+
 const prisma = new PrismaClient();
+
+async function getMysqldumpPath() {
+  // 1. Try global path
+  try {
+    await execAsync('mysqldump --version');
+    return 'mysqldump';
+  } catch (e) {
+    // Continue to check specific paths
+  }
+
+  // 2. Check Laragon paths
+  const laragonPath = 'C:\\laragon\\bin\\mysql';
+  if (fs.existsSync(laragonPath)) {
+    const dirs = fs.readdirSync(laragonPath);
+    for (const dir of dirs) {
+      const dumpPath = path.join(laragonPath, dir, 'bin', 'mysqldump.exe');
+      if (fs.existsSync(dumpPath)) {
+        console.log(`   ℹ️  Found mysqldump in Laragon: ${dumpPath}`);
+        return `"${dumpPath}"`;
+      }
+    }
+  }
+
+  // 3. Check XAMPP paths
+  const xamppPath = 'C:\\xampp\\mysql\\bin\\mysqldump.exe';
+  if (fs.existsSync(xamppPath)) {
+    console.log(`   ℹ️  Found mysqldump in XAMPP: ${xamppPath}`);
+    return `"${xamppPath}"`;
+  }
+
+  // 4. Check common Linux paths
+  const linuxPaths = [
+    '/usr/bin/mysqldump',
+    '/usr/local/bin/mysqldump',
+    '/usr/local/mysql/bin/mysqldump'
+  ];
+  
+  for (const linuxPath of linuxPaths) {
+    if (fs.existsSync(linuxPath)) {
+      console.log(`   ℹ️  Found mysqldump in Linux path: ${linuxPath}`);
+      return `"${linuxPath}"`;
+    }
+  }
+
+  throw new Error('mysqldump not found');
+}
 
 async function createCompleteBackup() {
   console.log('🚀 Starting complete backup (.mswbak)...\n');
@@ -33,7 +100,7 @@ async function createCompleteBackup() {
     
     // Parse DATABASE_URL - format: mysql://user:pass@host:port/database?params
     const dbUrl = process.env.DATABASE_URL;
-    const urlMatch = dbUrl.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/);
+    const urlMatch = dbUrl.match(/mysql:\/\/([^:]+):([^@]*)@([^:]+):(\d+)\/([^?]+)/);
     
     if (!urlMatch) {
       throw new Error('Invalid DATABASE_URL format');
@@ -41,11 +108,23 @@ async function createCompleteBackup() {
     
     const [, dbUser, dbPass, dbHost, dbPort, dbName] = urlMatch;
     
-    // Use mysqldump with SSL skip for Aiven cloud databases
-    await execAsync(
-      `mysqldump -h "${dbHost}" -P ${dbPort} -u "${dbUser}" -p"${dbPass}" --single-transaction --skip-ssl "${dbName}" > "${dbBackupPath}"`
-    );
-    console.log(`   ✅ Database backup created: ${(fs.statSync(dbBackupPath).size / 1024).toFixed(2)} KB\n`);
+    // Check if mysqldump is available
+    let dbBackupCreated = false;
+    try {
+      const mysqldumpCmd = await getMysqldumpPath();
+      const passwordFlag = dbPass ? `-p"${dbPass}"` : '';
+      
+      // Use mysqldump (removed --skip-ssl as it causes issues with some versions)
+      await execAsync(
+        `${mysqldumpCmd} -h "${dbHost}" -P ${dbPort} -u "${dbUser}" ${passwordFlag} --single-transaction "${dbName}" > "${dbBackupPath}"`
+      );
+      console.log(`   ✅ Database backup created: ${(fs.statSync(dbBackupPath).size / 1024).toFixed(2)} KB\n`);
+      dbBackupCreated = true;
+    } catch (err) {
+      console.warn('   ⚠️  mysqldump not found or failed. Skipping SQL backup.');
+      console.warn(`       Error: ${err.message}`);
+      console.warn('       (Only JSON data and uploads will be backed up)');
+    }
     
     // 2. Create app data backup
     console.log('📦 Step 2/4: Creating app data backup...');
@@ -129,20 +208,25 @@ async function createCompleteBackup() {
     
     // 4. Create manifest with checksums
     console.log('📦 Step 4/4: Creating manifest...');
+    const manifestFiles = {
+      'app-data.json': {
+        size: fs.statSync(appDataPath).size,
+        checksum: await getFileChecksum(appDataPath)
+      }
+    };
+
+    if (dbBackupCreated) {
+      manifestFiles['database.sql'] = {
+        size: fs.statSync(dbBackupPath).size,
+        checksum: await getFileChecksum(dbBackupPath)
+      };
+    }
+
     const manifest = {
       version: '1.0.0',
       createdAt: new Date().toISOString(),
       backupType: 'complete',
-      files: {
-        'database.sql': {
-          size: fs.statSync(dbBackupPath).size,
-          checksum: await getFileChecksum(dbBackupPath)
-        },
-        'app-data.json': {
-          size: fs.statSync(appDataPath).size,
-          checksum: await getFileChecksum(appDataPath)
-        }
-      },
+      files: manifestFiles,
       stats: {
         packages: packages.length,
         blogs: blogs.length,

@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
     
     // If filename is provided, serve the file
     if (filename) {
+      // Trim whitespace from filename (fixes issue with translated filenames having leading spaces)
+      const cleanFilename = filename.trim();
       const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-      const filePath = path.join(uploadsDir, filename);
+      const filePath = path.join(uploadsDir, cleanFilename);
       
       // Security check - ensure the file is within the uploads directory
       const resolvedPath = path.resolve(filePath);

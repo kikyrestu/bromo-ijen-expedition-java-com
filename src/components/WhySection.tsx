@@ -1,51 +1,84 @@
 'use client';
 
-import { Shield, Users, Clock, Award, Heart, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Users, Clock, Award, Heart, Globe, MapPin, Star, CheckCircle, Zap, Smile } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const WhySection = () => {
-  const features = [
-    {
-      icon: Shield,
-      title: 'Keamanan Terjamin',
-      description:
-        'Prioritas utama kami adalah keselamatan dan keamanan Anda. Semua aktivitas telah melalui prosedur keamanan yang ketat dengan tim guide berpengalaman.',
-    },
-    {
-      icon: Users,
-      title: 'Tim Profesional',
-      description:
-        'Tim guide kami adalah profesional yang telah berpengalaman bertahun-tahun dan memiliki pengetahuan mendalam tentang destinasi wisata Indonesia.',
-    },
-    {
-      icon: Clock,
-      title: 'Fleksibilitas Waktu',
-      description:
-        'Kami memahami kebutuhan setiap traveler. Paket wisata kami dapat disesuaikan dengan jadwal dan preferensi Anda untuk pengalaman yang lebih personal.',
-    },
-    {
-      icon: Award,
-      title: 'Kualitas Terbaik',
-      description:
-        'Kami hanya bekerja dengan partner terpercaya dan menyediakan akomodasi serta transportasi berkualitas tinggi untuk kenyamanan maksimal.',
-    },
-    {
-      icon: Heart,
-      title: 'Pelayanan Ramah',
-      description:
-        'Tim customer service kami siap membantu Anda 24/7 dengan pelayanan yang ramah dan responsif untuk memastikan perjalanan Anda berjalan lancar.',
-    },
-    {
-      icon: Globe,
-      title: 'Destinasi Eksklusif',
-      description:
-        'Kami menghadirkan destinasi-destinasi tersembunyi yang belum banyak diketahui wisatawan, memberikan pengalaman unik dan tak terlupakan.',
-    },
-  ];
+const iconMap: any = {
+  Shield, Users, Clock, Award, Heart, Globe, MapPin, Star, CheckCircle, Zap, Smile
+};
 
-  const summary = [
-    { value: '5,000+', label: 'Destinations' },
-    { value: '96%', label: 'Happy Travellers' },
-    { value: '24/7', label: 'Support Team' },
+interface WhySectionProps {
+  overrideContent?: any;
+}
+
+const WhySection: React.FC<WhySectionProps> = ({ overrideContent }) => {
+  const { currentLanguage } = useLanguage();
+  const [fetchedContent, setFetchedContent] = useState<any>(null);
+
+  useEffect(() => {
+    if (overrideContent) return;
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/sections?section=whyChooseUs&language=${currentLanguage}`);
+        const json = await res.json();
+        if (json?.success && json?.data) {
+          setFetchedContent(json.data);
+        }
+      } catch (e) {
+        // silent fail
+      }
+    };
+    run();
+  }, [overrideContent, currentLanguage]);
+
+  const content = overrideContent || fetchedContent || {
+    title: 'Your Trusted Partner for Unforgettable Journeys',
+    description: 'Kami membangun pengalaman perjalanan yang aman, personal, dan penuh momen seru. Nikmati layanan profesional dengan detail yang diperhatikan, mulai dari perencanaan hingga perjalanan selesai.',
+    features: [
+      {
+        icon: 'Shield',
+        title: 'Keamanan Terjamin',
+        description: 'Prioritas utama kami adalah keselamatan dan keamanan Anda. Semua aktivitas telah melalui prosedur keamanan yang ketat dengan tim guide berpengalaman.',
+      },
+      {
+        icon: 'Users',
+        title: 'Tim Profesional',
+        description: 'Tim guide kami adalah profesional yang telah berpengalaman bertahun-tahun dan memiliki pengetahuan mendalam tentang destinasi wisata Indonesia.',
+      },
+      {
+        icon: 'Clock',
+        title: 'Fleksibilitas Waktu',
+        description: 'Kami memahami kebutuhan setiap traveler. Paket wisata kami dapat disesuaikan dengan jadwal dan preferensi Anda untuk pengalaman yang lebih personal.',
+      },
+      {
+        icon: 'Award',
+        title: 'Kualitas Terbaik',
+        description: 'Kami hanya bekerja dengan partner terpercaya dan menyediakan akomodasi serta transportasi berkualitas tinggi untuk kenyamanan maksimal.',
+      },
+      {
+        icon: 'Heart',
+        title: 'Pelayanan Ramah',
+        description: 'Tim customer service kami siap membantu Anda 24/7 dengan pelayanan yang ramah dan responsif untuk memastikan perjalanan Anda berjalan lancar.',
+      },
+      {
+        icon: 'Globe',
+        title: 'Destinasi Eksklusif',
+        description: 'Kami menghadirkan destinasi-destinasi tersembunyi yang belum banyak diketahui wisatawan, memberikan pengalaman unik dan tak terlupakan.',
+      },
+    ],
+    summary: [
+      { value: '5,000+', label: 'Destinations' },
+      { value: '96%', label: 'Happy Travellers' },
+      { value: '24/7', label: 'Support Team' },
+    ]
+  };
+
+  const features = Array.isArray(content.features) ? content.features : [];
+  const summary = Array.isArray(content.summary) ? content.summary : [
+      { value: '5,000+', label: 'Destinations' },
+      { value: '96%', label: 'Happy Travellers' },
+      { value: '24/7', label: 'Support Team' },
   ];
 
   return (
@@ -58,16 +91,16 @@ const WhySection = () => {
             </div>
 
             <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight">
-              Your Trusted Partner for Unforgettable Journeys
+              {content.title}
             </h2>
 
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
-              Kami membangun pengalaman perjalanan yang aman, personal, dan penuh momen seru. Nikmati layanan profesional
-              dengan detail yang diperhatikan, mulai dari perencanaan hingga perjalanan selesai.
-            </p>
+            <div 
+              className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl [&>p]:mb-4 last:[&>p]:mb-0"
+              dangerouslySetInnerHTML={{ __html: content.description }}
+            />
 
             <div className="grid sm:grid-cols-3 gap-4 pt-4">
-              {summary.map((item, index) => (
+              {summary.map((item: any, index: number) => (
                 <div
                   key={`${item.label}-${index}`}
                   className="rounded-2xl border border-purple-100 bg-white px-4 py-5 shadow-sm text-center"
@@ -81,20 +114,23 @@ const WhySection = () => {
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4 pt-4">
-              {features.map((feature, index) => (
-                <div
-                  key={`${feature.title}-${index}`}
-                  className="flex items-start gap-4 rounded-3xl border border-slate-100 bg-slate-50/60 px-5 py-4"
-                >
-                  <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-orange-600">
-                    <feature.icon className="w-6 h-6" />
+              {features.map((feature: any, index: number) => {
+                const Icon = iconMap[feature.icon] || Shield;
+                return (
+                  <div
+                    key={`${feature.title}-${index}`}
+                    className="flex items-start gap-4 rounded-3xl border border-slate-100 bg-slate-50/60 px-5 py-4"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-orange-600 shrink-0">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-900">{feature.title}</h3>
+                      <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">{feature.title}</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="pt-6">
@@ -123,7 +159,7 @@ const WhySection = () => {
                   loading="lazy"
                 />
                 <img
-                  src="/assets/fun-1.png"
+                  src={content.image || "/assets/fun-1.png"}
                   alt="Why choose us illustration"
                   className="relative z-10 h-full w-full object-contain"
                   loading="lazy"

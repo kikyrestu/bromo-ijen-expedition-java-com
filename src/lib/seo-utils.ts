@@ -53,25 +53,69 @@ export async function generateMultiLanguageSeo(
 // Get translated content from database
 async function getTranslatedContent(pageType: string, pageSlug: string, language: string) {
   try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromoijen.com';
+    
     // For sections
     if (pageType === 'section') {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/sections?section=${pageSlug}&language=${language}`);
-      const data = await response.json();
-      return data.success ? data.data : null;
+      try {
+        const response = await fetch(`${siteUrl}/api/sections?section=${pageSlug}&language=${language}`, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (!response.ok) {
+          console.warn(`Failed to fetch section ${pageSlug}: ${response.status}`);
+          return null;
+        }
+        const data = await response.json();
+        return data.success ? data.data : null;
+      } catch (error) {
+        console.error(`Error fetching section ${pageSlug}:`, error);
+        return null;
+      }
     }
     
     // For packages
     if (pageType === 'package') {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/packages?slug=${pageSlug}&language=${language}`);
-      const data = await response.json();
-      return data.success ? data.data : null;
+      try {
+        const response = await fetch(`${siteUrl}/api/packages?slug=${pageSlug}&language=${language}`, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (!response.ok) {
+          console.warn(`Failed to fetch package ${pageSlug}: ${response.status}`);
+          return null;
+        }
+        const data = await response.json();
+        return data.success ? data.data : null;
+      } catch (error) {
+        console.error(`Error fetching package ${pageSlug}:`, error);
+        return null;
+      }
     }
     
     // For blogs
     if (pageType === 'blog') {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/blogs/${pageSlug}?language=${language}`);
-      const data = await response.json();
-      return data.success ? data.data : null;
+      try {
+        const response = await fetch(`${siteUrl}/api/blogs/${pageSlug}?language=${language}`, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (!response.ok) {
+          console.warn(`Failed to fetch blog ${pageSlug}: ${response.status}`);
+          return null;
+        }
+        const data = await response.json();
+        return data.success ? data.data : null;
+      } catch (error) {
+        console.error(`Error fetching blog ${pageSlug}:`, error);
+        return null;
+      }
     }
     
     return null;
