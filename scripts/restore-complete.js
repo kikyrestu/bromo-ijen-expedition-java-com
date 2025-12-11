@@ -46,26 +46,40 @@ async function restoreComplete() {
     }
 
     const isWindows = process.platform === 'win32';
-    if (isWindows) {
-      // PowerShell Expand-Archive requires .zip extension
-      let extractFile = backupFile;
-      let tempZipFile = null;
+    // Force unzip on Linux/Docker environment even if platform says win32 (unlikely in docker but safe)
+    // In Docker Alpine, we use unzip
+    try {
+        if (isWindows) {
+            // PowerShell Expand-Archive requires .zip extension
+            let extractFile = backupFile;
+            let tempZipFile = null;
 
-      if (!backupFile.toLowerCase().endsWith('.zip')) {
-        tempZipFile = backupFile + '.zip';
-        fs.copyFileSync(backupFile, tempZipFile);
-        extractFile = tempZipFile;
-      }
+            if (!backupFile.toLowerCase().endsWith('.zip')) {
+                tempZipFile = backupFile + '.zip';
+                fs.copyFileSync(backupFile, tempZipFile);
+                extractFile = tempZipFile;
+            }
 
-      try {
-        await execAsync(`powershell -command "Expand-Archive -Path '${extractFile}' -DestinationPath '${tempDir}' -Force"`);
-      } finally {
-        if (tempZipFile && fs.existsSync(tempZipFile)) {
-          fs.unlinkSync(tempZipFile);
+            try {
+                await execAsync(`powershell -command "Expand-Archive -Path '${extractFile}' -DestinationPath '${tempDir}' -Force"`);
+            } finally {
+                if (tempZipFile && fs.existsSync(tempZipFile)) {
+                fs.unlinkSync(tempZipFile);
+                }
+            }
+        } else {
+            // Linux / Docker Alpine
+            await execAsync(`unzip -o "${backupFile}" -d "${tempDir}"`);
         }
-      }
-    } else {
-      await execAsync(`unzip -o "${backupFile}" -d "${tempDir}"`);
+    } catch (extractError) {
+        // Fallback: try unzip command anyway if powershell fails or vice versa
+        console.log('   ⚠️  Primary extract failed, trying fallback...');
+        try {
+             await execAsync(`unzip -o "${backupFile}" -d "${tempDir}"`);
+        } catch (e) {
+             // If unzip also fails, try 7z if available
+             await execAsync(`7z x "${backupFile}" -o"${tempDir}" -y`);
+        }
     }
     console.log('   ✅ Archive extracted\n');
 

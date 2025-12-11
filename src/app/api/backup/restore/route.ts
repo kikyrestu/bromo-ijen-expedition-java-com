@@ -39,8 +39,9 @@ export async function POST(request: NextRequest) {
         const scriptPath = path.join(process.cwd(), 'scripts', 'restore-complete.js');
         
         // Use spawn instead of exec for streaming
-        const child = spawn(process.execPath, [scriptPath, tempFilePath], {
-          cwd: process.cwd()
+        const child = spawn('node', [scriptPath, tempFilePath], {
+          cwd: process.cwd(),
+          env: { ...process.env, FORCE_COLOR: '1' }
         });
 
         child.stdout.on('data', (data) => {
